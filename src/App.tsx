@@ -18,18 +18,19 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-4">
+        <div className="w-10 h-10 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-[#5a5a7a]">Loading...</p>
       </div>
     );
   }
 
   return (
     <Routes>
-      <Route path="/" element={<Welcome />} />
-      <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" replace />} />
-      <Route path="/signup" element={!user ? <SignUp /> : <Navigate to="/dashboard" replace />} />
-      <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Welcome />} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <SignUp />} />
+      <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" replace /> : <ForgotPassword />} />
       <Route path="/dashboard" element={user ? <Layout><Dashboard /></Layout> : <Navigate to="/login" replace />} />
       <Route path="/timetable" element={user ? <Layout><Timetable /></Layout> : <Navigate to="/login" replace />} />
       <Route path="/attendance" element={user ? <Layout><Attendance /></Layout> : <Navigate to="/login" replace />} />

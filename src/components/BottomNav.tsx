@@ -7,6 +7,7 @@ import {
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { path: '/timetable', label: 'Timetable', icon: CalendarDays },
+  { path: '/attendance', label: 'Attend', icon: BarChart3 },
   { path: '/ai-planner', label: 'AI', icon: Sparkles },
   { path: '/mood', label: 'Mood', icon: Smile },
   { path: '/pomodoro', label: 'Focus', icon: Timer },
@@ -16,21 +17,23 @@ const navItems = [
 export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card-strong border-t border-[#2d2d42]">
-      <div className="flex items-center justify-around px-2 py-2">
+      <div className="flex items-center justify-around px-1 py-2">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-1 px-2 py-1 rounded-xl min-w-[56px] transition-all duration-200 ${
-                isActive
-                  ? 'text-[#5b8def]'
-                  : 'text-[#5a5a7a]'
+              `flex flex-col items-center gap-1 px-2 py-1 rounded-xl min-w-[44px] transition-all duration-200 ${
+                isActive ? 'text-[#5b8def]' : 'text-[#5a5a7a]'
               }`
             }
           >
-            <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 1.5} />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            {({ isActive }) => (
+              <>
+                <item.icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 1.5} />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </div>
