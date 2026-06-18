@@ -4,7 +4,7 @@ import { CalendarDays, Clock, MapPin, Plus, X, GripVertical } from 'lucide-react
 import { timetableSlots } from '../data/dummyData';
 
 const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
-const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 interface Slot {
   time: string;
@@ -31,7 +31,13 @@ export default function Timetable() {
 
   const handleAdd = () => {
     if (!newSlot.subject || !newSlot.room) return;
-    setSchedule(prev => prev.map(d => d.day === newSlot.day ? { ...d, slots: [...d.slots, { time: newSlot.time, subject: newSlot.subject, room: newSlot.room, color: newSlot.color }] } : d));
+    setSchedule(prev => {
+      const exists = prev.find(d => d.day === newSlot.day);
+      if (exists) {
+        return prev.map(d => d.day === newSlot.day ? { ...d, slots: [...d.slots, { time: newSlot.time, subject: newSlot.subject, room: newSlot.room, color: newSlot.color }] } : d);
+      }
+      return [...prev, { day: newSlot.day, slots: [{ time: newSlot.time, subject: newSlot.subject, room: newSlot.room, color: newSlot.color }] }];
+    });
     setShowAdd(false);
     setNewSlot({ day: 'Monday', time: '09:00', subject: '', room: '', color: '#5b8def' });
   };
@@ -133,7 +139,7 @@ export default function Timetable() {
 
       {/* Desktop grid view */}
       <div className="hidden lg:block glass-card rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-6 border-b border-[#2d2d42]">
+        <div className="grid grid-cols-7 border-b border-[#2d2d42]">
           <div className="p-3 text-xs font-semibold text-[#5a5a7a] uppercase tracking-wider border-r border-[#2d2d42]">Time</div>
           {days.map(d => (
             <div key={d} className="p-3 text-xs font-semibold text-[#d0d0e0] uppercase tracking-wider text-center border-r border-[#2d2d42] last:border-r-0">{d.slice(0, 3)}</div>
@@ -146,7 +152,7 @@ export default function Timetable() {
             </div>
           ))}
           {days.map((day, dayIdx) => (
-            <div key={day} className="absolute border-r border-[#2d2d42]/50" style={{ left: `${16.67 + dayIdx * 16.67}%`, width: '16.67%', height: '100%' }}>
+            <div key={day} className="absolute border-r border-[#2d2d42]/50" style={{ left: `${(100/7) + dayIdx * (100/7)}%`, width: `${100/7}%`, height: '100%' }}>
               {schedule.find(d => d.day === day)?.slots.map((slot) => {
                 const hour = parseInt(slot.time.split(':')[0]);
                 const top = (hour - 8) * 60;

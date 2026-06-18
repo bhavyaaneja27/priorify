@@ -77,6 +77,10 @@ export const timetableSlots = [
     { time: '11:00', subject: 'Data Structures', room: 'LT-101', color: '#5b8def' },
     { time: '14:00', subject: 'Project Work', room: 'Lab-5', color: '#9b59b6' },
   ]},
+  { day: 'Saturday', slots: [
+    { time: '10:00', subject: 'Discrete Math', room: 'LT-102', color: '#f4a261' },
+    { time: '12:00', subject: 'Database Systems', room: 'LT-106', color: '#e84393' },
+  ]},
 ];
 
 export const aiPlans = [
