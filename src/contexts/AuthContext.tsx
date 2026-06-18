@@ -1,12 +1,19 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 
+interface AuthUser {
+  id: string;
+  email: string;
+  isDemo?: boolean;
+}
+
 interface AuthContextType {
-  user: { id: string; email: string } | null;
+  user: AuthUser | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
+  signInAsDemo: () => void;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
 }
@@ -14,20 +21,19 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let settled = false;
 
-    function finish(sessionUser: { id: string; email: string } | null) {
+    function finish(sessionUser: AuthUser | null) {
       if (settled) return;
       settled = true;
       setUser(sessionUser);
       setLoading(false);
     }
 
-    // Bail out fast if Supabase isn't configured
     if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
       finish(null);
       return;
@@ -41,7 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!settled) {
           finish(u);
         } else {
-          setUser(u);
+          // Don't overwrite a demo user with null when Supabase fires
+          setUser(prev => (prev?.isDemo ? prev : u));
         }
       });
       subscription = data.subscription;
@@ -50,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // If Supabase is slow or unreachable, unblock the UI after 800ms
     const fallback = setTimeout(() => finish(null), 800);
 
     return () => {
@@ -58,6 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription?.unsubscribe();
     };
   }, []);
+
+  const signInAsDemo = () => {
+    setUser({ id: 'demo', email: 'demo@studyai.app', isDemo: true });
+  };
 
   const signUp = async (email: string, password: string) => {
     try {
@@ -90,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    setUser(null);
     try {
       await supabase.auth.signOut();
     } catch {}
@@ -105,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signInWithGoogle, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ user, loading, signUp, signIn, signInWithGoogle, signInAsDemo, signOut, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

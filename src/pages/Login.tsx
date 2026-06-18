@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Brain, Eye, EyeOff, Mail, Lock, ArrowRight, Chrome } from 'lucide-react';
+import { Brain, Eye, EyeOff, Mail, Lock, ArrowRight, Chrome, Sparkles } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, signInAsDemo } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,7 +18,7 @@ export default function Login() {
     setLoading(true);
     const { error } = await signIn(email, password);
     if (error) {
-      setError(error.message || 'Invalid credentials');
+      setError(error.message || 'Invalid credentials. Try Demo Login below.');
     } else {
       navigate('/dashboard');
     }
@@ -27,8 +26,14 @@ export default function Login() {
   };
 
   const handleGoogle = async () => {
+    setError('');
     const { error } = await signInWithGoogle();
     if (error) setError(error.message);
+  };
+
+  const handleDemo = () => {
+    signInAsDemo();
+    navigate('/dashboard');
   };
 
   return (
@@ -37,6 +42,7 @@ export default function Login() {
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#4ecdc4]/10 rounded-full blur-[120px]" />
 
       <div className="w-full max-w-md relative z-10">
+        {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#5b8def] to-[#4ecdc4] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#5b8def]/20">
             <Brain className="w-7 h-7 text-white" />
@@ -45,21 +51,32 @@ export default function Login() {
           <p className="text-sm text-[#8a8aa3]">Sign in to continue your study journey</p>
         </div>
 
-        <div className="glass-card rounded-3xl p-8">
+        <div className="glass-card rounded-3xl p-8 space-y-4">
+          {/* Google */}
           <button
             onClick={handleGoogle}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-[#2d2d42] bg-[#12121a] text-white font-medium text-sm hover:bg-[#1e1e2e] transition-all duration-200 mb-6"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-[#2d2d42] bg-[#12121a] text-white font-medium text-sm hover:bg-[#1e1e2e] transition-all duration-200"
           >
             <Chrome className="w-5 h-5 text-[#5b8def]" />
             Continue with Google
           </button>
 
-          <div className="flex items-center gap-3 mb-6">
+          {/* Demo login */}
+          <button
+            onClick={handleDemo}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-[#5b8def]/30 bg-[#5b8def]/8 text-[#5b8def] font-medium text-sm hover:bg-[#5b8def]/15 hover:border-[#5b8def]/50 transition-all duration-200"
+          >
+            <Sparkles className="w-5 h-5" />
+            Continue as Guest (Demo)
+          </button>
+
+          <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-[#2d2d42]" />
-            <span className="text-xs text-[#5a5a7a] uppercase tracking-wider">or</span>
+            <span className="text-xs text-[#5a5a7a] uppercase tracking-wider">or sign in</span>
             <div className="flex-1 h-px bg-[#2d2d42]" />
           </div>
 
+          {/* Email / password form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#d0d0e0] mb-2">Email</label>
@@ -98,16 +115,7 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-[#2d2d42] bg-[#12121a] text-[#5b8def] focus:ring-[#5b8def]/30"
-                />
-                <span className="text-sm text-[#8a8aa3]">Remember me</span>
-              </label>
+            <div className="flex items-center justify-end">
               <Link to="/forgot-password" className="text-sm text-[#5b8def] hover:text-[#4ecdc4] transition-colors">
                 Forgot password?
               </Link>
@@ -127,21 +135,22 @@ export default function Login() {
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <>
-                  Sign In
-                  <ArrowRight className="w-4 h-4" />
-                </>
+                <>Sign In <ArrowRight className="w-4 h-4" /></>
               )}
             </button>
           </form>
 
-          <p className="text-center text-sm text-[#8a8aa3] mt-6">
+          <p className="text-center text-sm text-[#8a8aa3]">
             Don't have an account?{' '}
             <Link to="/signup" className="text-[#5b8def] hover:text-[#4ecdc4] transition-colors font-medium">
               Sign up
             </Link>
           </p>
         </div>
+
+        <p className="text-center text-xs text-[#3a3a52] mt-6">
+          Demo mode uses sample data. No account required.
+        </p>
       </div>
     </div>
   );
