@@ -1,15 +1,20 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Flame, Zap, Clock, BookOpen, TrendingUp, Award,
-  ChevronRight, Sun, Calendar, MapPin
+  Sun, Calendar, MapPin
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts';
-import {
-  subjects, weeklyHeatmap, stressData, upcomingClasses, achievements, todayAIPlan, userProfile
-} from '../data/dummyData';
+import { 
+  useMood, 
+  useMoodHistory, 
+  useUserProfile, 
+  useSubjects, 
+  useTimetable, 
+  usePomodoroHistory, 
+  useAIPlans 
+} from '../hooks/usePersistence';
 
 function CircularProgress({ value, color, size = 56, strokeWidth = 5, label }: { value: number; color: string; size?: number; strokeWidth?: number; label: string }) {
   const radius = (size - strokeWidth) / 2;
@@ -19,7 +24,7 @@ function CircularProgress({ value, color, size = 56, strokeWidth = 5, label }: {
     <div className="flex flex-col items-center gap-2">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={radius} stroke="#2d2d42" strokeWidth={strokeWidth} fill="none" />
+          <circle cx={size / 2} cy={size / 2} r={radius} stroke="var(--border-color)" strokeWidth={strokeWidth} fill="none" />
           <circle cx={size / 2} cy={size / 2} r={radius} stroke={color} strokeWidth={strokeWidth} fill="none"
             strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
             style={{ transition: 'stroke-dashoffset 1s ease-out' }}
@@ -62,9 +67,96 @@ function SectionTitle({ icon: Icon, title, subtitle }: { icon: any; title: strin
 }
 
 export default function Dashboard() {
-  const [selectedMood, setSelectedMood] = useState('okay');
+  const { profile, loading: loadingProfile } = useUserProfile();
+  const { subjectsList: subjects, loading: loadingSubjects } = useSubjects();
+  const { schedule, loading: loadingTimetable } = useTimetable();
+  const { moodHistory, loading: loadingMoodHistory } = useMoodHistory();
+  const { selectedMood, saveMood: setSelectedMood, loading: loadingMood } = useMood();
+  const { history: pomoHistory, loading: loadingPomo } = usePomodoroHistory();
+  const { plans, loading: loadingPlans } = useAIPlans();
+
   const moodColors: Record<string, string> = { great: '#2ecc71', okay: '#5b8def', tired: '#f4a261', stressed: '#ff6b6b', overwhelmed: '#e84393' };
   const moodLabels: Record<string, string> = { great: 'Feeling amazing!', okay: 'Decent energy.', tired: 'Take short breaks.', stressed: 'Try breathing exercises.', overwhelmed: 'Focus on one thing.' };
+
+  if (loadingProfile || loadingSubjects || loadingTimetable || loadingMoodHistory || loadingMood || loadingPomo || loadingPlans || !profile) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-[#5a5a7a]">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  // 1. Heatmap study hours over last 7 days
+  const weeklyHeatmap = Array.from({ length: 7 }).map((_, idx) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - idx));
+    const dateStr = d.toISOString().split('T')[0];
+    const match = pomoHistory.find((h: any) => h.date === dateStr);
+    const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return {
+      day: weekdayNames[d.getDay()],
+      hours: match ? parseFloat((match.totalMinutes / 60).toFixed(1)) : 0
+    };
+  });
+
+  // 2. Stress & Focus over last 7 days
+  const stressData = Array.from({ length: 7 }).map((_, idx) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - idx));
+    const dateStr = d.toISOString().split('T')[0];
+    const match = moodHistory.find((h: any) => h.date === dateStr);
+    const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return {
+      day: weekdayNames[d.getDay()],
+      stress: match ? match.stress : 5.0,
+      focus: match ? match.focus : 5.0
+    };
+  });
+
+  // 3. Upcoming classes for today
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const todayName = weekdays[new Date().getDay()];
+  const todayTimetable = schedule.find((d: any) => d.day === todayName);
+  const upcomingClasses = todayTimetable ? todayTimetable.slots.map((s: any, idx: number) => ({
+    id: idx.toString(),
+    subject: s.subject,
+    time: s.time,
+    room: s.room,
+    duration: s.duration || 90,
+    color: s.color
+  })) : [];
+
+  // 4. Today's AI Plan
+  const latestPlan = plans && plans.length > 0 ? plans[plans.length - 1] : null;
+  const currentDayItem = latestPlan ? latestPlan.schedule.find((d: any) => !d.completed) || latestPlan.schedule[0] : null;
+  
+  const todayAIPlan = {
+    greeting: `Good morning, ${profile.name}!`,
+    mood: selectedMood,
+    totalDuration: currentDayItem ? currentDayItem.hours * 60 : 0,
+    breaks: currentDayItem ? Math.max(1, currentDayItem.hours - 1) : 0,
+    plan: currentDayItem ? currentDayItem.topics.map((topic: string, idx: number) => {
+      const hoursPerTopic = currentDayItem.hours / currentDayItem.topics.length;
+      return {
+        time: idx === 0 ? "09:00" : idx === 1 ? "11:30" : "14:00",
+        subject: latestPlan.subject,
+        topic: topic,
+        priority: latestPlan.difficulty.toLowerCase() === 'hard' ? 'high' : latestPlan.difficulty.toLowerCase() === 'medium' ? 'medium' : 'low',
+        duration: Math.round(hoursPerTopic * 60)
+      };
+    }) : []
+  };
+
+  // 5. Achievements
+  const achievements = [
+    { id: '1', name: 'Study Streak', description: '7 days in a row', icon: 'flame', unlocked: (profile.streak || 0) >= 7, xp: 100 },
+    { id: '2', name: 'Deep Focus', description: '5 hours without break', icon: 'target', unlocked: pomoHistory.some((h: any) => h.totalMinutes >= 300), xp: 150 },
+    { id: '3', name: 'Early Bird', description: 'Study before 7 AM', icon: 'sun', unlocked: false, xp: 75 },
+    { id: '4', name: 'Perfect Attendance', description: '100% for a week', icon: 'check', unlocked: false, xp: 200 },
+    { id: '5', name: 'AI Planner', description: 'Created first plan', icon: 'sparkles', unlocked: plans.length > 0, xp: 50 },
+    { id: '6', name: 'Master', description: '1000 XP earned', icon: 'crown', unlocked: (profile.totalXP || 0) >= 1000, xp: 500 },
+  ];
 
   return (
     <div className="space-y-6">
@@ -82,11 +174,11 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f4a261]/10 border border-[#f4a261]/20">
             <Flame className="w-4 h-4 text-[#f4a261]" />
-            <span className="text-sm font-semibold text-[#f4a261]">{userProfile.streak} day streak</span>
+            <span className="text-sm font-semibold text-[#f4a261]">{profile.streak} day streak</span>
           </div>
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#5b8def]/10 border border-[#5b8def]/20">
             <Zap className="w-4 h-4 text-[#5b8def]" />
-            <span className="text-sm font-semibold text-[#5b8def]">{userProfile.totalXP} XP</span>
+            <span className="text-sm font-semibold text-[#5b8def]">{profile.totalXP} XP</span>
           </div>
         </div>
       </div>
@@ -97,9 +189,13 @@ export default function Dashboard() {
         <Card className="lg:col-span-2">
           <SectionTitle icon={TrendingUp} title="Subject Progress" subtitle="Your learning journey across all subjects" />
           <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
-            {subjects.map((s) => (
-              <CircularProgress key={s.id} value={s.progress} color={s.color} label={s.name} />
-            ))}
+            {subjects.length === 0 ? (
+              <p className="text-sm text-[#8a8aa3] py-4">No active subjects. Add them via settings or logs.</p>
+            ) : (
+              subjects.map((s) => (
+                <CircularProgress key={s.id} value={s.progress} color={s.color} label={s.name} />
+              ))
+            )}
           </div>
         </Card>
 
@@ -113,7 +209,7 @@ export default function Dashboard() {
                   <Clock className="w-4 h-4 text-[#5b8def]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">{userProfile.totalHours}h</p>
+                  <p className="text-sm font-semibold text-white">{profile.totalHours}h</p>
                   <p className="text-xs text-[#5a5a7a]">Total study time</p>
                 </div>
               </div>
@@ -135,7 +231,7 @@ export default function Dashboard() {
                   <Sun className="w-4 h-4 text-[#f4a261]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Level {userProfile.level}</p>
+                  <p className="text-sm font-semibold text-white">Level {profile.level}</p>
                   <p className="text-xs text-[#5a5a7a]">Current level</p>
                 </div>
               </div>
@@ -152,12 +248,12 @@ export default function Dashboard() {
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyHeatmap}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2d2d42" vertical={false} />
-                <XAxis dataKey="day" tick={{ fill: '#8a8aa3', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#5a5a7a', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
+                <XAxis dataKey="day" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ background: '#1a1a24', border: '1px solid #2d2d42', borderRadius: 12, color: '#e8e8f0' }}
-                  formatter={(val: number) => [`${val} hours`, 'Study Time']}
+                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12, color: 'var(--text-primary)' }}
+                  formatter={(val: any) => [`${val} hours`, 'Study Time']}
                 />
                 <Bar dataKey="hours" fill="#5b8def" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -171,11 +267,11 @@ export default function Dashboard() {
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stressData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2d2d42" vertical={false} />
-                <XAxis dataKey="day" tick={{ fill: '#8a8aa3', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#5a5a7a', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 10]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
+                <XAxis dataKey="day" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 10]} />
                 <Tooltip
-                  contentStyle={{ background: '#1a1a24', border: '1px solid #2d2d42', borderRadius: 12, color: '#e8e8f0' }}
+                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12, color: 'var(--text-primary)' }}
                 />
                 <Area type="monotone" dataKey="stress" stroke="#ff6b6b" fill="#ff6b6b" fillOpacity={0.15} strokeWidth={2} />
                 <Area type="monotone" dataKey="focus" stroke="#4ecdc4" fill="#4ecdc4" fillOpacity={0.15} strokeWidth={2} />
@@ -224,30 +320,37 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's AI Plan */}
         <Card className="lg:col-span-2">
-          <SectionTitle icon={Zap} title="Today's AI Study Plan" subtitle={`${todayAIPlan.totalDuration} minutes • ${todayAIPlan.breaks} breaks`} />
+          <SectionTitle icon={Zap} title="Today's AI Study Plan" subtitle={todayAIPlan.plan.length > 0 ? `${todayAIPlan.totalDuration} minutes • ${todayAIPlan.breaks} breaks` : 'Get started with AI'} />
           <div className="space-y-3">
-            {todayAIPlan.plan.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-4 p-3 rounded-xl bg-[#12121a] hover:bg-[#1e1e2e] transition-colors">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#5b8def]/20 to-[#4ecdc4]/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-[#5b8def]">{item.time}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-white truncate">{item.subject}</p>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${
-                      item.priority === 'high' ? 'bg-[#ff6b6b]/10 text-[#ff6b6b]' :
-                      item.priority === 'medium' ? 'bg-[#f4a261]/10 text-[#f4a261]' :
-                      'bg-[#2ecc71]/10 text-[#2ecc71]'
-                    }`}>{item.priority}</span>
-                  </div>
-                  <p className="text-xs text-[#8a8aa3] truncate">{item.topic}</p>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-[#5a5a7a] flex-shrink-0">
-                  <Clock className="w-3 h-3" />
-                  {item.duration}m
-                </div>
+            {todayAIPlan.plan.length === 0 ? (
+              <div className="py-8 text-center space-y-3">
+                <p className="text-sm text-[#8a8aa3]">No active AI study plans found.</p>
+                <p className="text-xs text-[#5a5a7a]">Head over to the AI Planner tab to generate your first study schedule!</p>
               </div>
-            ))}
+            ) : (
+              todayAIPlan.plan.map((item: any, idx: number) => (
+                <div key={idx} className="flex items-center gap-4 p-3 rounded-xl bg-[#12121a] hover:bg-[#1e1e2e] transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#5b8def]/20 to-[#4ecdc4]/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-[#5b8def]">{item.time}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-white truncate">{item.subject}</p>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${
+                        item.priority === 'high' ? 'bg-[#ff6b6b]/10 text-[#ff6b6b]' :
+                        item.priority === 'medium' ? 'bg-[#f4a261]/10 text-[#f4a261]' :
+                        'bg-[#2ecc71]/10 text-[#2ecc71]'
+                      }`}>{item.priority}</span>
+                    </div>
+                    <p className="text-xs text-[#8a8aa3] truncate">{item.topic}</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-[#5a5a7a] flex-shrink-0">
+                    <Clock className="w-3 h-3" />
+                    {item.duration}m
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 
@@ -255,19 +358,25 @@ export default function Dashboard() {
         <Card>
           <SectionTitle icon={Calendar} title="Upcoming Classes" subtitle="Today" />
           <div className="space-y-3">
-            {upcomingClasses.map((cls) => (
-              <div key={cls.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#12121a]">
-                <div className="w-1 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: cls.color }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{cls.subject}</p>
-                  <div className="flex items-center gap-2 text-xs text-[#5a5a7a]">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{cls.time}</span>
-                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{cls.room}</span>
-                  </div>
-                </div>
-                <span className="text-xs text-[#8a8aa3] flex-shrink-0">{cls.duration}m</span>
+            {upcomingClasses.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-xs text-[#5a5a7a]">No classes scheduled for today.</p>
               </div>
-            ))}
+            ) : (
+              upcomingClasses.map((cls: any) => (
+                <div key={cls.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#12121a]">
+                  <div className="w-1 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: cls.color }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{cls.subject}</p>
+                    <div className="flex items-center gap-2 text-xs text-[#5a5a7a]">
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{cls.time}</span>
+                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{cls.room}</span>
+                    </div>
+                  </div>
+                  <span className="text-xs text-[#8a8aa3] flex-shrink-0">{cls.duration}m</span>
+                </div>
+              ))
+            )}
           </div>
         </Card>
       </div>

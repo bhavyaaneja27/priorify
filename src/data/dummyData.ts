@@ -132,18 +132,31 @@ export const pomodoroHistory = [
   { date: '2026-06-16', sessions: 5, totalMinutes: 125, focusScore: 72 },
 ];
 
-export const userProfile = {
-  name: 'Alex Johnson',
-  email: 'alex.johnson@university.edu',
-  avatar: 'AJ',
-  branch: 'Computer Science',
-  year: '3rd Year',
-  university: 'MIT Engineering',
-  totalXP: 1280,
-  level: 12,
-  streak: 7,
-  totalHours: 342,
+const getInitialProfile = () => {
+  const defaultProfile = {
+    name: 'Alex Johnson',
+    email: 'alex.johnson@university.edu',
+    avatar: 'AJ',
+    branch: 'Computer Science',
+    year: '3rd Year',
+    university: 'MIT Engineering',
+    totalXP: 1280,
+    level: 12,
+    streak: 7,
+    totalHours: 342,
+  };
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('user_profile');
+    if (saved) {
+      try {
+        return { ...defaultProfile, ...JSON.parse(saved) };
+      } catch {}
+    }
+  }
+  return defaultProfile;
 };
+
+export const userProfile = getInitialProfile();
 
 export const todayAIPlan = {
   greeting: 'Good morning, Alex!',

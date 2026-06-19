@@ -4,13 +4,14 @@ import { supabase } from '../lib/supabase';
 interface AuthUser {
   id: string;
   email: string;
+  name?: string;
   isDemo?: boolean;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
   signInAsDemo: () => void;
@@ -43,7 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-        const u = session?.user ? { id: session.user.id, email: session.user.email || '' } : null;
+        const u = session?.user ? {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name
+        } : null;
         if (!settled) {
           finish(u);
         } else {
@@ -69,9 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser({ id: 'demo', email: 'demo@studyai.app', isDemo: true });
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name?: string) => {
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: name ? { data: { full_name: name } } : undefined
+      });
       return { error };
     } catch (e) {
       return { error: e };

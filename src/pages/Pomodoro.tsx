@@ -5,7 +5,7 @@ import {
   Flame, Zap, Check
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { pomodoroHistory } from '../data/dummyData';
+import { usePomodoroHistory } from '../hooks/usePersistence';
 
 const WORK_MINUTES = 25;
 const BREAK_MINUTES = 5;
@@ -24,7 +24,7 @@ function CircularTimer({ total, remaining, color, label }: { total: number; rema
   return (
     <div className="relative flex items-center justify-center">
       <svg width="280" height="280" className="-rotate-90">
-        <circle cx="140" cy="140" r="120" stroke="#2d2d42" strokeWidth="8" fill="none" />
+        <circle cx="140" cy="140" r="120" stroke="var(--border-color)" strokeWidth="8" fill="none" />
         <circle cx="140" cy="140" r="120" stroke={color} strokeWidth="8" fill="none"
           strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
           style={{ transition: 'stroke-dashoffset 1s linear' }}
@@ -52,10 +52,11 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 }
 
 export default function Pomodoro() {
+  const { history, addPomodoroSession } = usePomodoroHistory();
   const [mode, setMode] = useState<'work' | 'break' | 'longBreak'>('work');
   const [timeLeft, setTimeLeft] = useState(WORK_MINUTES * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [sessions, setSessions] = useState(3);
+  const [sessions, setSessions] = useState(0);
   const [totalSessions, setTotalSessions] = useState(0);
   const [breakSuggestions] = useState([
     "Stretch your arms and neck",
@@ -70,36 +71,60 @@ export default function Pomodoro() {
   const totalTime = mode === 'work' ? WORK_MINUTES * 60 : mode === 'break' ? BREAK_MINUTES * 60 : LONG_BREAK_MINUTES * 60;
   const timerColor = mode === 'work' ? '#5b8def' : mode === 'break' ? '#4ecdc4' : '#9b59b6';
 
+  const playChime = () => {
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-500.wav');
+      audio.volume = 0.5;
+      audio.play();
+    } catch {}
+  };
+
+  const sendNotification = (title: string, body: string) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body });
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
       intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsRunning(false);
-            if (mode === 'work') {
-              setTotalSessions(s => s + 1);
-              setSessions(s => {
-                if (s >= 4) {
-                  setMode('longBreak');
-                  return 0;
-                } else {
-                  setMode('break');
-                  return s + 1;
-                }
-              });
-            } else {
-              setMode('work');
-            }
-            return WORK_MINUTES * 60;
-          }
-          return prev - 1;
-        });
+        setTimeLeft(prev => prev - 1);
       }, 1000);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, timeLeft, mode, sessions, totalSessions]);
+  }, [isRunning, timeLeft]);
+
+  useEffect(() => {
+    if (timeLeft === 0) {
+      setIsRunning(false);
+      playChime();
+      if (mode === 'work') {
+        setTotalSessions(t => t + 1);
+        addPomodoroSession(25);
+        sendNotification("Focus Block Completed!", "Great job! Time for a short break.");
+        setSessions(s => {
+          if (s >= 3) {
+            setMode('longBreak');
+            return 0;
+          } else {
+            setMode('break');
+            return s + 1;
+          }
+        });
+      } else {
+        setMode('work');
+        sendNotification("Break Over!", "Time to get back to work.");
+      }
+    }
+  }, [timeLeft, mode]);
 
   useEffect(() => {
     setTimeLeft(mode === 'work' ? WORK_MINUTES * 60 : mode === 'break' ? BREAK_MINUTES * 60 : LONG_BREAK_MINUTES * 60);
@@ -205,7 +230,7 @@ export default function Pomodoro() {
             <Flame className="w-5 h-5 text-[#f4a261]" />
           </div>
           <div>
-            <p className="text-xl font-bold text-white">{sessions}</p>
+            <p className="text-xl font-bold text-white">{4 - (sessions % 4)}</p>
             <p className="text-xs text-[#8a8aa3]">Until Long Break</p>
           </div>
         </Card>
@@ -253,13 +278,13 @@ export default function Pomodoro() {
         </div>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={pomodoroHistory}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2d2d42" vertical={false} />
-              <XAxis dataKey="date" tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { weekday: 'short' })} tick={{ fill: '#8a8aa3', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#5a5a7a', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <BarChart data={history}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
+              <XAxis dataKey="date" tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { weekday: 'short' })} tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ background: '#1a1a24', border: '1px solid #2d2d42', borderRadius: 12, color: '#e8e8f0' }}
-                formatter={(val: number, name: string) => [val, name === 'sessions' ? 'Sessions' : 'Minutes']}
+                contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12, color: 'var(--text-primary)' }}
+                formatter={(val: any, name: any) => [val, name === 'sessions' ? 'Sessions' : 'Minutes']}
               />
               <Bar dataKey="sessions" fill="#5b8def" radius={[6, 6, 0, 0]} name="sessions" />
               <Bar dataKey="totalMinutes" fill="#4ecdc4" radius={[6, 6, 0, 0]} name="minutes" />

@@ -1,0 +1,706 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { timetableSlots, attendance, aiPlans, pomodoroHistory, subjects } from '../data/dummyData';
+
+const groupSlotsByDay = (flatSlots: any[]) => {
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days.map(day => ({
+    day,
+    slots: flatSlots
+      .filter(s => s.day === day)
+      .map(s => ({
+        time: s.time,
+        subject: s.subject,
+        room: s.room,
+        color: s.color,
+        duration: s.duration
+      }))
+  }));
+};
+
+// 1. Timetable Hook
+export function useTimetable() {
+  const { user } = useAuth();
+  const [schedule, setSchedule] = useState<any[]>(timetableSlots);
+  const [loading, setLoading] = useState(true);
+
+  const isDemo = !user || user.isDemo;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      if (isDemo) {
+        const saved = localStorage.getItem('timetable_slots');
+        if (saved) {
+          try {
+            setSchedule(JSON.parse(saved));
+          } catch {}
+        } else {
+          setSchedule(timetableSlots);
+        }
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from('timetable')
+            .select('*')
+            .eq('user_id', user.id);
+          if (data && !error) {
+            setSchedule(groupSlotsByDay(data));
+          }
+        } catch {}
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, isDemo]);
+
+  const saveSchedule = async (updater: any[] | ((prev: any[]) => any[])) => {
+    const resolvedSchedule = typeof updater === 'function' ? updater(schedule) : updater;
+    setSchedule(resolvedSchedule);
+
+    if (isDemo) {
+      localStorage.setItem('timetable_slots', JSON.stringify(resolvedSchedule));
+    } else {
+      try {
+        console.log(`[Supabase timetable] Saving schedule for user ${user.id}...`);
+        const { error: delError } = await supabase.from('timetable').delete().eq('user_id', user.id);
+        if (delError) {
+          console.error('[Supabase timetable] Error deleting existing slots:', delError);
+        }
+
+        const flat = [];
+        for (const dayGroup of resolvedSchedule) {
+          for (const slot of dayGroup.slots) {
+            flat.push({
+              user_id: user.id,
+              day: dayGroup.day,
+              time: slot.time,
+              subject: slot.subject,
+              room: slot.room,
+              color: slot.color,
+              duration: slot.duration || 90
+            });
+          }
+        }
+        if (flat.length > 0) {
+          const { error: insError } = await supabase.from('timetable').insert(flat);
+          if (insError) {
+            console.error('[Supabase timetable] Error inserting slots:', insError);
+          } else {
+            console.log(`[Supabase timetable] Successfully saved ${flat.length} slots.`);
+          }
+        }
+      } catch (err) {
+        console.error('[Supabase timetable] Catch error in saveSchedule:', err);
+      }
+    }
+  };
+
+  return { schedule, saveSchedule, loading };
+}
+
+// 2. Attendance Hook
+export function useAttendance() {
+  const { user } = useAuth();
+  const [attendanceList, setAttendanceList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isDemo = !user || user.isDemo;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      if (isDemo) {
+        const saved = localStorage.getItem('attendance_data');
+        if (saved) {
+          try {
+            setAttendanceList(JSON.parse(saved));
+          } catch {}
+        } else {
+          setAttendanceList(attendance);
+        }
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('user_id', user.id);
+          if (data && data.length > 0 && !error) {
+            setAttendanceList(data);
+          } else {
+            setAttendanceList([]);
+          }
+        } catch {
+          setAttendanceList([]);
+        }
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, isDemo]);
+
+  const saveAttendance = async (updater: any[] | ((prev: any[]) => any[])) => {
+    const resolvedList = typeof updater === 'function' ? updater(attendanceList) : updater;
+    setAttendanceList(resolvedList);
+
+    if (isDemo) {
+      localStorage.setItem('attendance_data', JSON.stringify(resolvedList));
+    } else {
+      try {
+        console.log(`[Supabase attendance] Saving attendance for user ${user.id}...`);
+        const { error: delError } = await supabase.from('attendance').delete().eq('user_id', user.id);
+        if (delError) {
+          console.error('[Supabase attendance] Error deleting existing records:', delError);
+        }
+
+        const mapped = resolvedList.map(a => ({
+          user_id: user.id,
+          subject: a.subject,
+          present: a.present,
+          total: a.total,
+          color: a.color
+        }));
+        if (mapped.length > 0) {
+          const { error: insError } = await supabase.from('attendance').insert(mapped);
+          if (insError) {
+            console.error('[Supabase attendance] Error inserting records:', insError);
+          } else {
+            console.log(`[Supabase attendance] Successfully saved ${mapped.length} records.`);
+          }
+        }
+      } catch (err) {
+        console.error('[Supabase attendance] Catch error in saveAttendance:', err);
+      }
+    }
+  };
+
+  return { attendanceList, saveAttendance, loading };
+}
+
+// 3. AI Plans Hook
+export function useAIPlans() {
+  const { user } = useAuth();
+  const [plans, setPlans] = useState<any[]>(aiPlans);
+  const [loading, setLoading] = useState(true);
+
+  const isDemo = !user || user.isDemo;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      if (isDemo) {
+        const saved = localStorage.getItem('ai_plans');
+        if (saved) {
+          try {
+            setPlans(JSON.parse(saved));
+          } catch {}
+        } else {
+          setPlans(aiPlans);
+        }
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from('ai_plans')
+            .select('*')
+            .eq('user_id', user.id);
+          if (data && !error) {
+            setPlans(data.map(p => ({
+              id: p.id,
+              subject: p.subject,
+              topic: p.topic,
+              difficulty: p.difficulty,
+              examDate: p.exam_date,
+              daysLeft: p.days_left,
+              schedule: p.schedule
+            })));
+          }
+        } catch {}
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, isDemo]);
+
+  const savePlans = async (updater: any[] | ((prev: any[]) => any[])) => {
+    const resolvedPlans = typeof updater === 'function' ? updater(plans) : updater;
+    setPlans(resolvedPlans);
+
+    if (isDemo) {
+      localStorage.setItem('ai_plans', JSON.stringify(resolvedPlans));
+    } else {
+      try {
+        console.log(`[Supabase ai_plans] Saving plans for user ${user.id}...`);
+        const { error: delError } = await supabase.from('ai_plans').delete().eq('user_id', user.id);
+        if (delError) {
+          console.error('[Supabase ai_plans] Error deleting existing plans:', delError);
+        }
+
+        const mapped = resolvedPlans.map(p => ({
+          id: (p.id && String(p.id).length > 20) ? p.id : undefined,
+          user_id: user.id,
+          subject: p.subject,
+          topic: p.topic,
+          difficulty: p.difficulty,
+          exam_date: p.examDate,
+          days_left: p.daysLeft,
+          schedule: p.schedule
+        }));
+        if (mapped.length > 0) {
+          const { error: insError } = await supabase.from('ai_plans').insert(mapped);
+          if (insError) {
+            console.error('[Supabase ai_plans] Error inserting plans:', insError);
+          } else {
+            console.log(`[Supabase ai_plans] Successfully saved ${mapped.length} plans.`);
+          }
+        }
+      } catch (err) {
+        console.error('[Supabase ai_plans] Catch error in savePlans:', err);
+      }
+    }
+  };
+
+  return { plans, savePlans, loading };
+}
+
+// 4. Mood Check-In Hook
+export function useMood() {
+  const { user } = useAuth();
+  const [selectedMood, setSelectedMood] = useState('okay');
+  const [stressLevel, setStressLevel] = useState(5.0);
+  const [focusLevel, setFocusLevel] = useState(5.0);
+  const [loading, setLoading] = useState(true);
+
+  const isDemo = !user || user.isDemo;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      if (isDemo) {
+        const saved = localStorage.getItem('today_mood');
+        const savedStress = localStorage.getItem('today_stress');
+        const savedFocus = localStorage.getItem('today_focus');
+        if (saved) setSelectedMood(saved);
+        if (savedStress) setStressLevel(parseFloat(savedStress));
+        if (savedFocus) setFocusLevel(parseFloat(savedFocus));
+      } else {
+        try {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const { data, error } = await supabase
+            .from('mood_history')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('date', todayStr)
+            .maybeSingle();
+          if (data && !error) {
+            setSelectedMood(data.mood_value);
+            setStressLevel(data.stress_level ?? 5.0);
+            setFocusLevel(data.focus_level ?? 5.0);
+          }
+        } catch {}
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, isDemo]);
+
+  const saveMood = async (newMood: string, stress?: number, focus?: number) => {
+    setSelectedMood(newMood);
+    const finalStress = stress !== undefined ? stress : stressLevel;
+    const finalFocus = focus !== undefined ? focus : focusLevel;
+    setStressLevel(finalStress);
+    setFocusLevel(finalFocus);
+
+    if (isDemo) {
+      localStorage.setItem('today_mood', newMood);
+      localStorage.setItem('today_stress', finalStress.toString());
+      localStorage.setItem('today_focus', finalFocus.toString());
+    } else {
+      try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        await supabase
+          .from('mood_history')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('date', todayStr);
+        await supabase.from('mood_history').insert({
+          user_id: user.id,
+          date: todayStr,
+          mood_value: newMood,
+          stress_level: finalStress,
+          focus_level: finalFocus
+        });
+      } catch {}
+    }
+  };
+
+  return { selectedMood, stressLevel, focusLevel, saveMood, loading };
+}
+
+// 5. Mood History Hook
+export function useMoodHistory() {
+  const { user } = useAuth();
+  const [moodHistory, setMoodHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isDemo = !user || user.isDemo;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      if (isDemo) {
+        const saved = localStorage.getItem('mood_history_list');
+        if (saved) {
+          try {
+            setMoodHistory(JSON.parse(saved));
+          } catch {
+            setMoodHistory([]);
+          }
+        } else {
+          // default dummy data translated to fit
+          const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+          const dummy = days.map((day, idx) => ({
+            day,
+            stress: [3.2, 4.5, 2.8, 5.0, 3.5, 1.5, 2.0][idx],
+            focus: [7.8, 6.5, 8.2, 6.0, 7.5, 9.0, 8.5][idx],
+          }));
+          setMoodHistory(dummy);
+        }
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from('mood_history')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: true })
+            .limit(7);
+          if (data && !error) {
+            const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            setMoodHistory(data.map(row => {
+              const d = new Date(row.date);
+              return {
+                day: weekdayNames[d.getDay()],
+                stress: row.stress_level,
+                focus: row.focus_level,
+                mood: row.mood_value,
+                date: row.date
+              };
+            }));
+          }
+        } catch {}
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, isDemo]);
+
+  return { moodHistory, loading };
+}
+
+// 6. Pomodoro History Hook
+export function usePomodoroHistory() {
+  const { user } = useAuth();
+  const [history, setHistory] = useState<any[]>(pomodoroHistory);
+  const [loading, setLoading] = useState(true);
+
+  const isDemo = !user || user.isDemo;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      if (isDemo) {
+        const saved = localStorage.getItem('pomodoro_history');
+        if (saved) {
+          try {
+            setHistory(JSON.parse(saved));
+          } catch {}
+        } else {
+          setHistory(pomodoroHistory);
+        }
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from('pomodoro_history')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: true });
+          if (data && !error) {
+            setHistory(data.map(h => ({
+              date: h.date,
+              sessions: h.sessions,
+              totalMinutes: h.total_minutes,
+              focusScore: h.focus_score
+            })));
+          }
+        } catch {}
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, isDemo]);
+
+  const addPomodoroSession = async (minutes: number) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayIndex = history.findIndex(h => h.date === todayStr);
+    let updatedHistory = [...history];
+
+    if (todayIndex >= 0) {
+      updatedHistory[todayIndex] = {
+        ...updatedHistory[todayIndex],
+        sessions: updatedHistory[todayIndex].sessions + 1,
+        totalMinutes: updatedHistory[todayIndex].totalMinutes + minutes
+      };
+    } else {
+      updatedHistory.push({
+        date: todayStr,
+        sessions: 1,
+        totalMinutes: minutes,
+        focusScore: 85
+      });
+    }
+
+    setHistory(updatedHistory);
+
+    if (isDemo) {
+      localStorage.setItem('pomodoro_history', JSON.stringify(updatedHistory));
+    } else {
+      try {
+        const { data } = await supabase
+          .from('pomodoro_history')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('date', todayStr)
+          .maybeSingle();
+
+        if (data) {
+          await supabase
+            .from('pomodoro_history')
+            .update({
+              sessions: data.sessions + 1,
+              total_minutes: data.total_minutes + minutes
+            })
+            .eq('id', data.id);
+        } else {
+          await supabase.from('pomodoro_history').insert({
+            user_id: user.id,
+            date: todayStr,
+            sessions: 1,
+            total_minutes: minutes,
+            focus_score: 85
+          });
+        }
+      } catch {}
+    }
+  };
+
+  return { history, addPomodoroSession, loading };
+}
+
+// 7. User Profile Hook
+export function useUserProfile() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const isDemo = !user || user.isDemo;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      if (isDemo) {
+        const saved = localStorage.getItem('user_profile');
+        if (saved) {
+          try {
+            setProfile(JSON.parse(saved));
+          } catch {
+            setProfile(null);
+          }
+        } else {
+          setProfile({
+            name: 'Alex Johnson',
+            email: 'alex.johnson@university.edu',
+            avatar: 'AJ',
+            branch: 'Computer Science',
+            year: '3rd Year',
+            university: 'MIT Engineering',
+            totalXP: 1280,
+            level: 12,
+            streak: 7,
+            totalHours: 342,
+          });
+        }
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          const { data: pomoData } = await supabase
+            .from('pomodoro_history')
+            .select('total_minutes')
+            .eq('user_id', user.id);
+          const totalMins = pomoData?.reduce((acc, curr) => acc + (curr.total_minutes || 0), 0) || 0;
+          const totalHours = Math.round(totalMins / 60);
+
+          if (data && !error) {
+            setProfile({
+              name: data.full_name || user.name || 'Student',
+              email: user.email || '',
+              avatar: (data.full_name || user.name || 'Student').split(' ').map((n: any) => n[0]).join('').toUpperCase().slice(0, 2),
+              branch: data.branch || '',
+              year: data.year || '',
+              university: data.university || '',
+              totalXP: data.xp || 0,
+              level: data.level || 1,
+              streak: data.streak || 1,
+              totalHours: totalHours
+            });
+          } else {
+            const newProfile = {
+              id: user.id,
+              full_name: user.name || 'Student',
+              university: '',
+              branch: '',
+              year: '',
+              xp: 0,
+              streak: 1,
+              level: 1
+            };
+            await supabase.from('profiles').insert(newProfile);
+            setProfile({
+              name: newProfile.full_name,
+              email: user.email || '',
+              avatar: newProfile.full_name.split(' ').map((n: any) => n[0]).join('').toUpperCase().slice(0, 2),
+              branch: newProfile.branch,
+              year: newProfile.year,
+              university: newProfile.university,
+              totalXP: newProfile.xp,
+              level: newProfile.level,
+              streak: newProfile.streak,
+              totalHours: 0
+            });
+          }
+        } catch {
+          setProfile(null);
+        }
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, isDemo]);
+
+  const saveProfile = async (updated: any) => {
+    setProfile(updated);
+    if (isDemo) {
+      localStorage.setItem('user_profile', JSON.stringify(updated));
+    } else {
+      try {
+        await supabase
+          .from('profiles')
+          .update({
+            full_name: updated.name,
+            university: updated.university,
+            branch: updated.branch,
+            year: updated.year,
+            xp: updated.totalXP,
+            level: updated.level,
+            streak: updated.streak
+          })
+          .eq('id', user.id);
+      } catch {}
+    }
+  };
+
+  return { profile, saveProfile, loading };
+}
+
+// 8. Subjects Hook
+export function useSubjects() {
+  const { user } = useAuth();
+  const [subjectsList, setSubjectsList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isDemo = !user || user.isDemo;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      if (isDemo) {
+        const saved = localStorage.getItem('subjects_data');
+        if (saved) {
+          try {
+            setSubjectsList(JSON.parse(saved));
+          } catch {
+            setSubjectsList(subjects);
+          }
+        } else {
+          setSubjectsList(subjects);
+        }
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from('subjects')
+            .select('*')
+            .eq('user_id', user.id);
+          if (data && data.length > 0 && !error) {
+            setSubjectsList(data.map(row => ({
+              id: row.id,
+              name: row.name,
+              code: row.code,
+              color: row.color,
+              totalHours: row.total_hours,
+              completedHours: row.completed_hours,
+              progress: Math.round((row.completed_hours / (row.total_hours || 1)) * 100)
+            })));
+          } else {
+            setSubjectsList([]);
+          }
+        } catch {
+          setSubjectsList([]);
+        }
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, isDemo]);
+
+  const saveSubjects = async (updater: any[] | ((prev: any[]) => any[])) => {
+    const resolvedList = typeof updater === 'function' ? updater(subjectsList) : updater;
+    setSubjectsList(resolvedList);
+
+    if (isDemo) {
+      localStorage.setItem('subjects_data', JSON.stringify(resolvedList));
+    } else {
+      try {
+        console.log(`[Supabase subjects] Saving subjects for user ${user.id}...`);
+        const { error: delError } = await supabase.from('subjects').delete().eq('user_id', user.id);
+        if (delError) {
+          console.error('[Supabase subjects] Error deleting existing subjects:', delError);
+        }
+
+        const mapped = resolvedList.map(s => ({
+          user_id: user.id,
+          name: s.name,
+          code: s.code,
+          color: s.color,
+          total_hours: s.totalHours,
+          completed_hours: s.completedHours
+        }));
+        if (mapped.length > 0) {
+          const { error: insError } = await supabase.from('subjects').insert(mapped);
+          if (insError) {
+            console.error('[Supabase subjects] Error inserting subjects:', insError);
+          } else {
+            console.log(`[Supabase subjects] Successfully saved ${mapped.length} subjects.`);
+          }
+        }
+      } catch (err) {
+        console.error('[Supabase subjects] Catch error in saveSubjects:', err);
+      }
+    }
+  };
+
+  return { subjectsList, saveSubjects, loading };
+}

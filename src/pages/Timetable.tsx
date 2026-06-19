@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarDays, Clock, MapPin, Plus, X, GripVertical } from 'lucide-react';
-import { timetableSlots } from '../data/dummyData';
 
 const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -11,23 +10,107 @@ interface Slot {
   subject: string;
   room: string;
   color: string;
+  duration?: number;
 }
 
-function getSlotStyle(time: string) {
-  const hour = parseInt(time.split(':')[0]);
-  const startOffset = (hour - 8) * 60;
-  const duration = 90;
-  return {
-    top: `${startOffset}px`,
-    height: `${duration}px`,
-  };
+interface PositionedSlot extends Slot {
+  top: number;
+  height: number;
+  left: string;
+  width: string;
 }
+
+function getTopOffset(timeString: string): number {
+  const [hourStr, minStr] = timeString.split(':');
+  const hour = parseInt(hourStr) || 8;
+  const minutes = parseInt(minStr) || 0;
+  return (hour - 8) * 60 + minutes;
+}
+
+function getPositionedSlots(slots: Slot[]): PositionedSlot[] {
+  if (!slots) return [];
+  const sorted = [...slots].sort((a, b) => getTopOffset(a.time) - getTopOffset(b.time));
+  
+  const positioned: PositionedSlot[] = [];
+  const columns: number[][] = []; 
+  
+  const slotsWithTimes = sorted.map(slot => {
+    const top = getTopOffset(slot.time);
+    const duration = slot.duration || 90;
+    const height = duration - 5;
+    return { slot, top, height, end: top + duration };
+  });
+
+  const slotCols = new Array(slotsWithTimes.length).fill(0);
+  
+  for (let i = 0; i < slotsWithTimes.length; i++) {
+    const item = slotsWithTimes[i];
+    let colAssigned = false;
+    for (let c = 0; c < columns.length; c++) {
+      const lastSlotInColIndex = columns[c][columns[c].length - 1];
+      const lastSlot = slotsWithTimes[lastSlotInColIndex];
+      if (item.top >= lastSlot.end) {
+        columns[c].push(i);
+        slotCols[i] = c;
+        colAssigned = true;
+        break;
+      }
+    }
+    if (!colAssigned) {
+      columns.push([i]);
+      slotCols[i] = columns.length - 1;
+    }
+  }
+
+  const slotWidthGroups = new Array(slotsWithTimes.length).fill(1);
+  for (let i = 0; i < slotsWithTimes.length; i++) {
+    const a = slotsWithTimes[i];
+    const overlaps = slotsWithTimes.map((b, idx) => {
+      const isOverlapping = (b.top < a.end && b.end > a.top);
+      return { idx, isOverlapping };
+    }).filter(x => x.isOverlapping);
+
+    const uniqueCols = new Set(overlaps.map(o => slotCols[o.idx]));
+    const colCount = Math.max(overlaps.length, uniqueCols.size);
+    slotWidthGroups[i] = colCount;
+  }
+
+  for (let i = 0; i < slotsWithTimes.length; i++) {
+    const { slot, top, height } = slotsWithTimes[i];
+    const col = slotCols[i];
+    const totalCols = slotWidthGroups[i];
+    const widthPct = 100 / totalCols;
+    const leftPct = col * widthPct;
+    
+    positioned.push({
+      ...slot,
+      top,
+      height,
+      left: `${leftPct}%`,
+      width: `calc(${widthPct}% - 4px)`,
+    });
+  }
+
+  return positioned;
+}
+
+import { useTimetable } from '../hooks/usePersistence';
 
 export default function Timetable() {
-  const [schedule, setSchedule] = useState(timetableSlots);
+  const { schedule, saveSchedule: setSchedule, loading } = useTimetable();
   const [showAdd, setShowAdd] = useState(false);
   const [newSlot, setNewSlot] = useState({ day: 'Monday', time: '09:00', subject: '', room: '', color: '#5b8def' });
   const [draggedItem, setDraggedItem] = useState<{ day: string; slot: Slot } | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<{ day: string; time: string } | null>(null);
+
+  if (loading) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-[#5a5a7a]">Loading schedule...</p>
+      </div>
+    );
+  }
 
   const handleAdd = () => {
     if (!newSlot.subject || !newSlot.room) return;
@@ -43,10 +126,12 @@ export default function Timetable() {
   };
 
   const handleDelete = (day: string, time: string) => {
-    setSchedule(prev => prev.map(d => d.day === day ? { ...d, slots: d.slots.filter(s => s.time !== time) } : d));
+    setSchedule(prev => prev.map(d => d.day === day ? { ...d, slots: d.slots.filter((s: Slot) => s.time !== time) } : d));
   };
 
-  const handleDragStart = (day: string, slot: Slot) => {
+  const handleDragStart = (e: React.DragEvent, day: string, slot: Slot) => {
+    e.dataTransfer.setData('text/plain', '');
+    e.dataTransfer.effectAllowed = 'move';
     setDraggedItem({ day, slot });
   };
 
@@ -54,22 +139,40 @@ export default function Timetable() {
     e.preventDefault();
   };
 
+  const handleDragEnter = (e: React.DragEvent, day: string, time: string) => {
+    e.preventDefault();
+    setDragOverCell({ day, time });
+  };
+
+  const handleDragLeave = () => {
+    setDragOverCell(null);
+  };
+
   const handleDrop = (e: React.DragEvent, targetDay: string, targetTime: string) => {
     e.preventDefault();
+    setDragOverCell(null);
     if (!draggedItem) return;
     const { day: sourceDay, slot: sourceSlot } = draggedItem;
     if (sourceDay === targetDay && sourceSlot.time === targetTime) return;
 
-    setSchedule(prev => prev.map(d => {
-      if (d.day === sourceDay) {
-        return { ...d, slots: d.slots.filter(s => s.time !== sourceSlot.time) };
-      }
-      if (d.day === targetDay) {
-        const filtered = d.slots.filter(s => s.time !== targetTime);
-        return { ...d, slots: [...filtered, { ...sourceSlot, time: targetTime }] };
-      }
-      return d;
-    }));
+    setSchedule(prev => {
+      let updated = prev.map(d => {
+        if (d.day === sourceDay) {
+          return { ...d, slots: d.slots.filter((s: Slot) => s.time !== sourceSlot.time) };
+        }
+        return d;
+      });
+
+      updated = updated.map(d => {
+        if (d.day === targetDay) {
+          const filtered = d.slots.filter((s: Slot) => s.time !== targetTime);
+          return { ...d, slots: [...filtered, { ...sourceSlot, time: targetTime }] };
+        }
+        return d;
+      });
+
+      return updated;
+    });
     setDraggedItem(null);
   };
 
@@ -120,7 +223,7 @@ export default function Timetable() {
               {day.slots.length === 0 && (
                 <p className="text-sm text-[#5a5a7a] py-2">No classes scheduled</p>
               )}
-              {day.slots.sort((a, b) => a.time.localeCompare(b.time)).map((slot) => (
+              {day.slots.sort((a: Slot, b: Slot) => a.time.localeCompare(b.time)).map((slot: Slot) => (
                 <div key={slot.time} className="flex items-center gap-3 p-3 rounded-xl bg-[#12121a] border-l-4" style={{ borderLeftColor: slot.color }}>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-white">{slot.subject}</p>
@@ -151,20 +254,52 @@ export default function Timetable() {
               <div className="absolute left-0 top-0 w-16 -translate-y-1/2 text-[10px] text-[#5a5a7a] text-right pr-2">{time}</div>
             </div>
           ))}
-          {days.map((day, dayIdx) => (
-            <div key={day} className="absolute border-r border-[#2d2d42]/50" style={{ left: `${(100/7) + dayIdx * (100/7)}%`, width: `${100/7}%`, height: '100%' }}>
-              {schedule.find(d => d.day === day)?.slots.map((slot) => {
-                const hour = parseInt(slot.time.split(':')[0]);
-                const top = (hour - 8) * 60;
-                return (
+          {days.map((day, dayIdx) => {
+            const daySlots = schedule.find(d => d.day === day)?.slots || [];
+            const positionedSlots = getPositionedSlots(daySlots);
+            return (
+              <div key={day} className="absolute border-r border-[#2d2d42]/50" style={{ left: `${(100/7) + dayIdx * (100/7)}%`, width: `${100/7}%`, height: '100%' }}>
+                {/* Hourly Drop Targets */}
+                {timeSlots.map((time, i) => {
+                  const isHovered = dragOverCell?.day === day && dragOverCell?.time === time;
+                  return (
+                    <div
+                      key={time}
+                      onDragOver={handleDragOver}
+                      onDragEnter={(e) => handleDragEnter(e, day, time)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, day, time)}
+                      className={`absolute left-0 right-0 h-[60px] transition-all border-b border-dashed border-[#2d2d42]/10 ${
+                        isHovered
+                          ? 'bg-[#5b8def]/15 border-2 border-dashed border-[#5b8def]/40 z-10'
+                          : 'hover:bg-[#5b8def]/5'
+                      }`}
+                      style={{ top: `${i * 60}px` }}
+                    />
+                  );
+                })}
+
+                {/* Class cards */}
+                {positionedSlots.map((slot) => (
                   <div
                     key={slot.time}
                     draggable
-                    onDragStart={() => handleDragStart(day, slot)}
+                    onDragStart={(e) => handleDragStart(e, day, slot)}
+                    onDragEnd={() => {
+                      setDraggedItem(null);
+                      setDragOverCell(null);
+                    }}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, day, slot.time)}
-                    className="absolute left-1 right-1 rounded-lg p-2 cursor-move group"
-                    style={{ top: `${top}px`, height: '85px', backgroundColor: slot.color + '20', borderLeft: `3px solid ${slot.color}` }}
+                    className="absolute rounded-lg p-2 cursor-move group select-none transition-all duration-200 hover:shadow-lg"
+                    style={{
+                      top: `${slot.top}px`,
+                      height: `${slot.height}px`,
+                      left: slot.left,
+                      width: slot.width,
+                      backgroundColor: slot.color + '20',
+                      borderLeft: `3px solid ${slot.color}`
+                    }}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
@@ -177,10 +312,10 @@ export default function Timetable() {
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          ))}
+                ))}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

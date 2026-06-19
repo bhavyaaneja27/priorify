@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, BookOpen, Clock, Calendar, Check, ChevronRight,
-  ChevronLeft, GraduationCap, Layers, AlertCircle
+  ChevronLeft, GraduationCap, Layers
 } from 'lucide-react';
-import { aiPlans } from '../data/dummyData';
 
 interface PlanItem {
   id: string;
@@ -29,8 +28,11 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
   );
 }
 
+import { useAIPlans } from '../hooks/usePersistence';
+import { generateStudyPlan } from '../lib/gemini';
+
 export default function AIPlanner() {
-  const [plans, setPlans] = useState<PlanItem[]>(aiPlans);
+  const { plans, savePlans: setPlans, loading } = useAIPlans();
   const [showForm, setShowForm] = useState(false);
   const [view, setView] = useState<'list' | 'calendar' | 'table'>('list');
   const [selectedPlan, setSelectedPlan] = useState<PlanItem | null>(null);
@@ -42,24 +44,59 @@ export default function AIPlanner() {
   });
   const [generating, setGenerating] = useState(false);
 
+  if (loading) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-[#5a5a7a]">Loading AI planner...</p>
+      </div>
+    );
+  }
+
   const handleGenerate = async () => {
     if (!formData.subject || !formData.topic || !formData.examDate) return;
     setGenerating(true);
-    await new Promise(r => setTimeout(r, 1500));
-    const daysLeft = Math.ceil((new Date(formData.examDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    
+    const examTime = new Date(formData.examDate).getTime();
+    const nowTime = new Date().getTime();
+    const daysLeft = Math.max(1, Math.ceil((examTime - nowTime) / (1000 * 60 * 60 * 24)));
+    
+    let scheduleItems;
+    try {
+      scheduleItems = await generateStudyPlan(formData.subject, formData.topic, formData.difficulty, daysLeft);
+    } catch (err) {
+      console.warn("Failed to generate with Gemini, falling back to local generator:", err);
+      
+      const planDays = Math.min(5, daysLeft);
+      const subtopics = [
+        `Introduction to ${formData.topic} & core concepts`,
+        `Deep dive into ${formData.topic} algorithms and workflows`,
+        `Practical implementations and coding exercises for ${formData.topic}`,
+        `Advanced edge cases, problem-solving, and optimizations`,
+        `Comprehensive review of ${formData.subject} notes & mock test`
+      ];
+      
+      scheduleItems = Array.from({ length: planDays }).map((_, idx) => {
+        const dayNum = idx + 1;
+        const topicIndex = Math.min(subtopics.length - 1, Math.floor((idx / planDays) * subtopics.length));
+        const hours = formData.difficulty === 'Hard' ? 4 : formData.difficulty === 'Medium' ? 3 : 2;
+        return {
+          day: `Day ${dayNum}`,
+          topics: [subtopics[topicIndex], `${formData.topic} practice session`],
+          hours,
+          completed: false
+        };
+      });
+    }
+
     const newPlan: PlanItem = {
       id: Date.now().toString(),
       subject: formData.subject,
       topic: formData.topic,
       difficulty: formData.difficulty,
       examDate: formData.examDate,
-      daysLeft: Math.max(0, daysLeft),
-      schedule: [
-        { day: 'Day 1', topics: ['Introduction & fundamentals', 'Basic concepts overview'], hours: 2, completed: false },
-        { day: 'Day 2', topics: ['Core theory', 'Practice problems'], hours: 3, completed: false },
-        { day: 'Day 3', topics: ['Advanced topics', 'Problem solving'], hours: 3, completed: false },
-        { day: 'Day 4', topics: ['Revision', 'Mock test'], hours: 2, completed: false },
-      ]
+      daysLeft,
+      schedule: scheduleItems
     };
     setPlans(prev => [...prev, newPlan]);
     setGenerating(false);
@@ -70,7 +107,7 @@ export default function AIPlanner() {
   const toggleComplete = (planId: string, dayIdx: number) => {
     setPlans(prev => prev.map(p => p.id === planId ? {
       ...p,
-      schedule: p.schedule.map((s, i) => i === dayIdx ? { ...s, completed: !s.completed } : s)
+      schedule: p.schedule.map((s: any, i: number) => i === dayIdx ? { ...s, completed: !s.completed } : s)
     } : p));
   };
 
@@ -228,7 +265,7 @@ export default function AIPlanner() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-[#5a5a7a]">{plan.schedule.filter(s => s.completed).length}/{plan.schedule.length} completed</span>
+                    <span className="text-xs text-[#5a5a7a]">{plan.schedule.filter((s: any) => s.completed).length}/{plan.schedule.length} completed</span>
                     <button
                       onClick={() => setSelectedPlan(selectedPlan?.id === plan.id ? null : plan)}
                       className="p-2 rounded-xl bg-[#12121a] text-[#8a8aa3] hover:text-white transition-all"
@@ -242,7 +279,7 @@ export default function AIPlanner() {
                 <div className="w-full h-2 rounded-full bg-[#12121a] overflow-hidden mb-2">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${(plan.schedule.filter(s => s.completed).length / plan.schedule.length) * 100}%` }}
+                    animate={{ width: `${(plan.schedule.filter((s: any) => s.completed).length / plan.schedule.length) * 100}%` }}
                     transition={{ duration: 0.5 }}
                     className="h-full rounded-full bg-gradient-to-r from-[#5b8def] to-[#4ecdc4]"
                   />
@@ -258,7 +295,7 @@ export default function AIPlanner() {
                       className="overflow-hidden"
                     >
                       <div className="space-y-2 mt-4 pt-4 border-t border-[#2d2d42]">
-                        {plan.schedule.map((day, idx) => (
+                        {plan.schedule.map((day: any, idx: number) => (
                           <div
                             key={idx}
                             className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
@@ -305,7 +342,7 @@ export default function AIPlanner() {
                 <h3 className="text-sm font-semibold text-white mb-1">{plan.subject}</h3>
                 <p className="text-xs text-[#8a8aa3] mb-3">{plan.topic}</p>
                 <div className="space-y-1 mb-3">
-                  {plan.schedule.slice(0, 3).map((day, idx) => (
+                  {plan.schedule.slice(0, 3).map((day: any, idx: number) => (
                     <div key={idx} className="flex items-center gap-2 text-xs">
                       <span className={`w-2 h-2 rounded-full ${day.completed ? 'bg-[#2ecc71]' : 'bg-[#2d2d42]'}`} />
                       <span className={day.completed ? 'text-[#8a8aa3] line-through' : 'text-[#d0d0e0]'}>{day.day}</span>
@@ -313,7 +350,7 @@ export default function AIPlanner() {
                   ))}
                 </div>
                 <div className="flex items-center justify-between text-xs text-[#5a5a7a]">
-                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{plan.schedule.reduce((s, d) => s + d.hours, 0)}h total</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{plan.schedule.reduce((s: number, d: any) => s + d.hours, 0)}h total</span>
                   <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{plan.daysLeft}d left</span>
                 </div>
               </Card>
@@ -349,12 +386,12 @@ export default function AIPlanner() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-20 h-1.5 rounded-full bg-[#2d2d42] overflow-hidden">
-                            <div className="h-full rounded-full bg-gradient-to-r from-[#5b8def] to-[#4ecdc4]" style={{ width: `${(plan.schedule.filter(s => s.completed).length / plan.schedule.length) * 100}%` }} />
+                            <div className="h-full rounded-full bg-gradient-to-r from-[#5b8def] to-[#4ecdc4]" style={{ width: `${(plan.schedule.filter((s: any) => s.completed).length / plan.schedule.length) * 100}%` }} />
                           </div>
-                          <span className="text-xs text-[#5a5a7a]">{plan.schedule.filter(s => s.completed).length}/{plan.schedule.length}</span>
+                          <span className="text-xs text-[#5a5a7a]">{plan.schedule.filter((s: any) => s.completed).length}/{plan.schedule.length}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-[#8a8aa3]">{plan.schedule.reduce((s, d) => s + d.hours, 0)}h</td>
+                      <td className="px-4 py-3 text-xs text-[#8a8aa3]">{plan.schedule.reduce((s: number, d: any) => s + d.hours, 0)}h</td>
                     </tr>
                   ))}
                 </tbody>

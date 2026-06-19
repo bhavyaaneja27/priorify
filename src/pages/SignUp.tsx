@@ -18,7 +18,7 @@ export default function SignUp() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error } = await signUp(email, password);
+    const { error } = await signUp(email, password, name);
     if (error) {
       setError(error.message || 'Failed to create account');
     } else {

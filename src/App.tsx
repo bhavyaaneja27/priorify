@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
@@ -10,6 +11,7 @@ import AIPlanner from './pages/AIPlanner';
 import MoodCheckIn from './pages/MoodCheckIn';
 import Pomodoro from './pages/Pomodoro';
 import Settings from './pages/Settings';
+import Welcome from './pages/Welcome';
 import Layout from './components/Layout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -25,6 +27,32 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
 function App() {
   const { loading } = useAuth();
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    function apply() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      let resolvedTheme = savedTheme;
+      if (savedTheme === 'system') {
+        resolvedTheme = mediaQuery.matches ? 'dark' : 'light';
+      }
+      if (resolvedTheme === 'light') {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      }
+    }
+    
+    apply();
+    
+    mediaQuery.addEventListener('change', apply);
+    return () => {
+      mediaQuery.removeEventListener('change', apply);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-4">
@@ -36,8 +64,9 @@ function App() {
 
   return (
     <Routes>
-      {/* Default: always show login first */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* Default: always show welcome first */}
+      <Route path="/" element={<Navigate to="/welcome" replace />} />
+      <Route path="/welcome" element={<GuestRoute><Welcome /></GuestRoute>} />
 
       {/* Auth pages — redirect to dashboard if already signed in */}
       <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />

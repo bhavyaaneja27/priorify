@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Smile, Sun, Coffee, Wind, Heart, Brain, Clock, Check, ArrowRight } from 'lucide-react';
 import { moodOptions } from '../data/dummyData';
@@ -94,38 +94,61 @@ const moodStudyAdjustments: Record<string, {
   },
 };
 
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function Card({ children, className = '', style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
       className={`glass-card rounded-2xl p-5 ${className}`}
+      style={style}
     >
       {children}
     </motion.div>
   );
 }
 
+import { useMood } from '../hooks/usePersistence';
+
 export default function MoodCheckIn() {
-  const [selectedMood, setSelectedMood] = useState('okay');
+  const { selectedMood, stressLevel, focusLevel, saveMood: setSelectedMood, loading } = useMood();
   const [submitted, setSubmitted] = useState(false);
+  const [localStress, setLocalStress] = useState(5.0);
+  const [localFocus, setLocalFocus] = useState(5.0);
+
+  // Sync state with loaded values
+  useEffect(() => {
+    setLocalStress(stressLevel);
+    setLocalFocus(focusLevel);
+  }, [stressLevel, focusLevel]);
+
+  if (loading) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-[#5a5a7a]">Loading mood check-in...</p>
+      </div>
+    );
+  }
+
   const mood = moodOptions.find(m => m.value === selectedMood);
-  const adjustment = moodStudyAdjustments[selectedMood];
+  const adjustment = moodStudyAdjustments[selectedMood || 'okay'] || moodStudyAdjustments['okay'];
 
   const handleSubmit = () => {
+    setSelectedMood(selectedMood, localStress, localFocus);
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white">Mood Check-In</h1>
         <p className="text-sm text-[#8a8aa3] mt-1">How you feel changes how you should study</p>
       </div>
 
-      {/* Mood Selector */}
+      {/* Mood Selector & Sliders */}
       <Card>
         <div className="flex items-center gap-2 mb-5">
           <div className="w-8 h-8 rounded-lg bg-[#5b8def]/10 flex items-center justify-center">
@@ -137,7 +160,7 @@ export default function MoodCheckIn() {
           {moodOptions.map((m) => (
             <button
               key={m.value}
-              onClick={() => setSelectedMood(m.value)}
+              onClick={() => setSelectedMood(m.value, localStress, localFocus)}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 ${
                 selectedMood === m.value
                   ? 'bg-[#1e1e2e] border-2 scale-105'
@@ -158,7 +181,50 @@ export default function MoodCheckIn() {
             </button>
           ))}
         </div>
-        <div className="mt-4 flex items-center justify-between">
+
+        {/* Stress & Focus Sliders */}
+        <div className="mt-6 pt-6 border-t border-[#2d2d42] grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-[#d0d0e0]">Stress Level</label>
+              <span className="text-xs font-bold text-[#ff6b6b]">{localStress.toFixed(1)} / 10</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              step="0.5"
+              value={localStress}
+              onChange={e => setLocalStress(parseFloat(e.target.value))}
+              className="w-full h-1.5 bg-[#12121a] rounded-lg appearance-none cursor-pointer accent-[#ff6b6b]"
+            />
+            <div className="flex justify-between text-[10px] text-[#5a5a7a] mt-1">
+              <span>Calm</span>
+              <span>Stressed</span>
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-[#d0d0e0]">Focus Level</label>
+              <span className="text-xs font-bold text-[#4ecdc4]">{localFocus.toFixed(1)} / 10</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              step="0.5"
+              value={localFocus}
+              onChange={e => setLocalFocus(parseFloat(e.target.value))}
+              className="w-full h-1.5 bg-[#12121a] rounded-lg appearance-none cursor-pointer accent-[#4ecdc4]"
+            />
+            <div className="flex justify-between text-[10px] text-[#5a5a7a] mt-1">
+              <span>Distracted</span>
+              <span>Focused</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-[#2d2d42] flex items-center justify-between">
           <p className="text-sm text-[#8a8aa3]">
             {mood?.desc}
           </p>
@@ -174,7 +240,7 @@ export default function MoodCheckIn() {
             ) : (
               <>
                 <ArrowRight className="w-4 h-4" />
-                Save Mood
+                Save Mood Check-In
               </>
             )}
           </button>

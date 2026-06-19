@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Bell, Palette, Shield, LogOut, ChevronRight, Moon,
-  Sun, Volume2, Mail, Smartphone, Check, Camera, Edit3
+  Sun, Laptop, Mail, Smartphone, Check, Camera, Edit3, Clock
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { userProfile } from '../data/dummyData';
+import { useUserProfile } from '../hooks/usePersistence';
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
@@ -33,8 +33,61 @@ export default function Settings() {
     email: false,
     push: true,
   });
-  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('theme') as 'dark' | 'light' | 'system') || 'dark';
+    }
+    return 'dark';
+  });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const { profile, saveProfile, loading: loadingProfile } = useUserProfile();
+  const [profileName, setProfileName] = useState('');
+  const [profileUniversity, setProfileUniversity] = useState('');
+  const [profileYear, setProfileYear] = useState('');
+  const [profileBranch, setProfileBranch] = useState('');
+  const [saveMessage, setSaveMessage] = useState('');
+
+  // Initial load
+  useEffect(() => {
+    if (profile) {
+      setProfileName(profile.name || '');
+      setProfileUniversity(profile.university || '');
+      setProfileYear(profile.year || '');
+      setProfileBranch(profile.branch || '');
+    }
+  }, [profile]);
+
+  const handleSaveProfile = async () => {
+    if (!profile) return;
+    const updated = {
+      ...profile,
+      name: profileName,
+      university: profileUniversity,
+      year: profileYear,
+      branch: profileBranch,
+      avatar: profileName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    };
+    await saveProfile(updated);
+    setSaveMessage('Profile changes saved successfully!');
+    setTimeout(() => setSaveMessage(''), 3000);
+  };
+
+  const applyTheme = (newTheme: 'dark' | 'light' | 'system') => {
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    let resolvedTheme = newTheme;
+    if (newTheme === 'system') {
+      resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    if (resolvedTheme === 'light') {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -88,70 +141,85 @@ export default function Settings() {
         {/* Content */}
         <div className="lg:col-span-3">
           {activeTab === 'profile' && (
-            <Card>
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 rounded-lg bg-[#5b8def]/10 flex items-center justify-center">
-                  <User className="w-4 h-4 text-[#5b8def]" />
-                </div>
-                <h3 className="text-sm font-semibold text-[#d0d0e0]">Profile Information</h3>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
-                <div className="relative">
-                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#5b8def] to-[#4ecdc4] flex items-center justify-center text-3xl font-bold text-white shadow-lg">
-                    {userProfile.avatar}
+            loadingProfile || !profile ? (
+              <Card className="h-64 flex flex-col items-center justify-center gap-3">
+                <div className="w-8 h-8 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-[#5a5a7a]">Loading profile...</p>
+              </Card>
+            ) : (
+              <Card>
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-8 h-8 rounded-lg bg-[#5b8def]/10 flex items-center justify-center">
+                    <User className="w-4 h-4 text-[#5b8def]" />
                   </div>
-                  <button className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-[#1e1e2e] border border-[#2d2d42] flex items-center justify-center text-[#8a8aa3] hover:text-white transition-colors">
-                    <Camera className="w-4 h-4" />
+                  <h3 className="text-sm font-semibold text-[#d0d0e0]">Profile Information</h3>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#5b8def] to-[#4ecdc4] flex items-center justify-center text-3xl font-bold text-white shadow-lg">
+                      {profile.avatar}
+                    </div>
+                    <button className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-[#1e1e2e] border border-[#2d2d42] flex items-center justify-center text-[#8a8aa3] hover:text-white transition-colors">
+                      <Camera className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="text-center sm:text-left">
+                    <h2 className="text-xl font-bold text-white">{profile.name}</h2>
+                    <p className="text-sm text-[#8a8aa3]">{user?.email || profile.email}</p>
+                    <div className="flex items-center gap-3 mt-2 justify-center sm:justify-start">
+                      {profile.branch && <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#5b8def]/10 text-[#5b8def]">{profile.branch}</span>}
+                      {profile.year && <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#4ecdc4]/10 text-[#4ecdc4]">{profile.year}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-[#8a8aa3] mb-2">Full Name</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
+                      <input value={profileName} onChange={e => setProfileName(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-[#8a8aa3] mb-2">Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
+                      <input disabled value={user?.email || profile.email} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white/50 text-sm focus:border-[#5b8def] outline-none transition-all cursor-not-allowed" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-[#8a8aa3] mb-2">University</label>
+                    <div className="relative">
+                      <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
+                      <input value={profileUniversity} onChange={e => setProfileUniversity(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-[#8a8aa3] mb-2">Year</label>
+                    <div className="relative">
+                      <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
+                      <input value={profileYear} onChange={e => setProfileYear(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-[#8a8aa3] mb-2">Branch</label>
+                    <div className="relative">
+                      <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
+                      <input value={profileBranch} onChange={e => setProfileBranch(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex items-center justify-between">
+                  <span className="text-sm text-[#2ecc71] font-medium">{saveMessage}</span>
+                  <button onClick={handleSaveProfile} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5b8def] to-[#4ecdc4] text-white font-medium text-sm hover:shadow-lg transition-all">
+                    Save Changes
                   </button>
                 </div>
-                <div className="text-center sm:text-left">
-                  <h2 className="text-xl font-bold text-white">{userProfile.name}</h2>
-                  <p className="text-sm text-[#8a8aa3]">{user?.email || userProfile.email}</p>
-                  <div className="flex items-center gap-3 mt-2 justify-center sm:justify-start">
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#5b8def]/10 text-[#5b8def]">{userProfile.branch}</span>
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#4ecdc4]/10 text-[#4ecdc4]">{userProfile.year}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-[#8a8aa3] mb-2">Full Name</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
-                    <input defaultValue={userProfile.name} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm text-[#8a8aa3] mb-2">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
-                    <input defaultValue={user?.email || userProfile.email} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm text-[#8a8aa3] mb-2">University</label>
-                  <div className="relative">
-                    <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
-                    <input defaultValue={userProfile.university} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm text-[#8a8aa3] mb-2">Year</label>
-                  <div className="relative">
-                    <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
-                    <input defaultValue={userProfile.year} className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#5b8def] to-[#4ecdc4] text-white font-medium text-sm hover:shadow-lg transition-all">
-                  Save Changes
-                </button>
-              </div>
-            </Card>
+              </Card>
+            )
           )}
 
           {activeTab === 'notifications' && (
@@ -237,7 +305,7 @@ export default function Settings() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button
-                  onClick={() => setTheme('dark')}
+                  onClick={() => applyTheme('dark')}
                   className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all border-2 ${
                     theme === 'dark' ? 'border-[#5b8def] bg-[#1e1e2e]' : 'border-[#2d2d42] bg-[#12121a] hover:border-[#3a3a55]'
                   }`}
@@ -251,7 +319,7 @@ export default function Settings() {
                   </div>
                 </button>
                 <button
-                  onClick={() => setTheme('light')}
+                  onClick={() => applyTheme('light')}
                   className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all border-2 ${
                     theme === 'light' ? 'border-[#5b8def] bg-[#1e1e2e]' : 'border-[#2d2d42] bg-[#12121a] hover:border-[#3a3a55]'
                   }`}
@@ -265,13 +333,13 @@ export default function Settings() {
                   </div>
                 </button>
                 <button
-                  onClick={() => setTheme('system')}
+                  onClick={() => applyTheme('system')}
                   className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all border-2 ${
                     theme === 'system' ? 'border-[#5b8def] bg-[#1e1e2e]' : 'border-[#2d2d42] bg-[#12121a] hover:border-[#3a3a55]'
                   }`}
                 >
                   <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#0a0a0f] to-[#f8f8fb] border border-[#2d2d42] flex items-center justify-center">
-                    <Volume2 className="w-8 h-8 text-[#5b8def]" />
+                    <Laptop className="w-8 h-8 text-[#5b8def]" />
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-semibold text-white">System</p>
