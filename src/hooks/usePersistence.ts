@@ -236,16 +236,21 @@ export function useAIPlans() {
           console.error('[Supabase ai_plans] Error deleting existing plans:', delError);
         }
 
-        const mapped = resolvedPlans.map(p => ({
-          id: (p.id && String(p.id).length > 20) ? p.id : undefined,
-          user_id: user.id,
-          subject: p.subject,
-          topic: p.topic,
-          difficulty: p.difficulty,
-          exam_date: p.examDate,
-          days_left: p.daysLeft,
-          schedule: p.schedule
-        }));
+        const mapped = resolvedPlans.map(p => {
+          const planObj: any = {
+            user_id: user.id,
+            subject: p.subject,
+            topic: p.topic,
+            difficulty: p.difficulty,
+            exam_date: p.examDate,
+            days_left: p.daysLeft,
+            schedule: p.schedule
+          };
+          if (p.id && String(p.id).length > 20) {
+            planObj.id = p.id;
+          }
+          return planObj;
+        });
         if (mapped.length > 0) {
           const { error: insError } = await supabase.from('ai_plans').insert(mapped);
           if (insError) {

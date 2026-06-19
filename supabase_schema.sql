@@ -147,10 +147,10 @@ BEGIN
     INSERT INTO public.profiles (id, full_name, university, branch, year, xp, streak, level)
     VALUES (
         new.id,
-        COALESCE(new.raw_user_meta_data->>'full_name', 'Alex Johnson'),
-        'MIT Engineering',
-        'Computer Science',
-        '3rd Year',
+        COALESCE(new.raw_user_meta_data->>'full_name', 'Student'),
+        '',
+        '',
+        '',
         0,
         1,
         1
