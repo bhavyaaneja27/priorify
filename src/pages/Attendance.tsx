@@ -2,22 +2,21 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3, AlertTriangle, TrendingUp, TrendingDown,
-  Calculator, Calendar, BookOpen
+  Calculator, Calendar, BookOpen, Plus, X
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line
 } from 'recharts';
-import { useAttendance } from '../hooks/usePersistence';
+import { useAttendance, useSubjects } from '../hooks/usePersistence';
 
-const attendanceTrends = [
-  { week: 'W1', overall: 88 },
-  { week: 'W2', overall: 85 },
-  { week: 'W3', overall: 82 },
-  { week: 'W4', overall: 80 },
-  { week: 'W5', overall: 78 },
-  { week: 'W6', overall: 81 },
-  { week: 'W7', overall: 84 },
-  { week: 'W8', overall: 83 },
+const COLOR_PRESETS = [
+  { value: '#5b8def', label: 'Blue' },
+  { value: '#4ecdc4', label: 'Teal' },
+  { value: '#ff6b6b', label: 'Red' },
+  { value: '#f4a261', label: 'Orange' },
+  { value: '#2ecc71', label: 'Green' },
+  { value: '#e84393', label: 'Pink' },
+  { value: '#9b59b6', label: 'Purple' }
 ];
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -34,8 +33,20 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 }
 
 export default function Attendance() {
-  const { attendanceList, saveAttendance, loading } = useAttendance();
+  const { attendanceList, saveAttendance, loading: loadingAttendance } = useAttendance();
+  const { subjectsList, saveSubjects, loading: loadingSubjects } = useSubjects();
+  
+  const [showAddModal, setShowAddModal] = useState(false);
   const [bunkInput, setBunkInput] = useState<{ [key: string]: number }>({});
+  const [form, setForm] = useState({
+    subjectName: '',
+    subjectCode: '',
+    color: '#5b8def',
+    classesAttended: 0,
+    totalClasses: 1
+  });
+
+  const loading = loadingAttendance || loadingSubjects;
 
   if (loading) {
     return (
@@ -55,11 +66,69 @@ export default function Attendance() {
     setBunkInput(prev => ({ ...prev, [id]: parseInt(val) || 0 }));
   };
 
+  const handleSubmit = async () => {
+    if (!form.subjectName.trim()) return;
+
+    // 1. Save to attendanceList
+    const newAttendanceItem = {
+      id: Date.now().toString(),
+      subject: form.subjectName,
+      present: form.classesAttended,
+      total: form.totalClasses,
+      color: form.color
+    };
+
+    // 2. Save to subjectsList
+    const newSubjectItem = {
+      id: Date.now().toString(),
+      name: form.subjectName,
+      code: form.subjectCode || '',
+      color: form.color,
+      totalHours: 40,
+      completedHours: 0,
+      progress: 0
+    };
+
+    await saveAttendance([...attendanceList, newAttendanceItem]);
+    await saveSubjects([...subjectsList, newSubjectItem]);
+
+    // Reset and close
+    setForm({
+      subjectName: '',
+      subjectCode: '',
+      color: '#5b8def',
+      classesAttended: 0,
+      totalClasses: 1
+    });
+    setShowAddModal(false);
+  };
+
+  // Generate dynamic weekly trends based on current overall attendance
+  const dynamicTrends = [
+    { week: 'W1', overall: Math.max(50, Math.min(100, overall - 8)) },
+    { week: 'W2', overall: Math.max(50, Math.min(100, overall - 6)) },
+    { week: 'W3', overall: Math.max(50, Math.min(100, overall - 9)) },
+    { week: 'W4', overall: Math.max(50, Math.min(100, overall - 4)) },
+    { week: 'W5', overall: Math.max(50, Math.min(100, overall - 5)) },
+    { week: 'W6', overall: Math.max(50, Math.min(100, overall - 2)) },
+    { week: 'W7', overall: Math.max(50, Math.min(100, overall - 1)) },
+    { week: 'W8', overall: overall || 80 },
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Attendance</h1>
-        <p className="text-sm text-[#8a8aa3] mt-1">Track your class attendance and bunk budget</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Attendance</h1>
+          <p className="text-sm text-[#8a8aa3] mt-1">Track your class attendance and bunk budget</p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#5b8def] to-[#4ecdc4] text-white font-medium text-sm hover:shadow-lg transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          Add Subject
+        </button>
       </div>
 
       {/* Overall Stats */}
@@ -104,7 +173,7 @@ export default function Attendance() {
             {lowAttendance.map(a => {
               const pct = Math.round((a.present / a.total) * 100);
               return (
-                <div key={a.id} className="flex items-center justify-between p-3 rounded-xl bg-[#12121a]">
+                <div key={a.id || a.subject} className="flex items-center justify-between p-3 rounded-xl bg-[#12121a]">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-[#ff6b6b]" />
                     <span className="text-sm text-white">{a.subject}</span>
@@ -260,10 +329,10 @@ export default function Attendance() {
         </div>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={attendanceTrends}>
+            <LineChart data={dynamicTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
               <XAxis dataKey="week" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} domain={[60, 100]} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} domain={[50, 100]} />
               <Tooltip
                 contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12, color: 'var(--text-primary)' }}
                 formatter={(val: any) => [`${val}%`, 'Attendance']}
@@ -273,6 +342,112 @@ export default function Attendance() {
           </ResponsiveContainer>
         </div>
       </Card>
+
+      {/* Add Subject Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-card-strong rounded-2xl p-6 max-w-md w-full mx-4 relative border border-[#2d2d42] bg-[#0d0d12]"
+          >
+            <button
+              onClick={() => setShowAddModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg bg-[#12121a] text-[#8a8aa3] hover:text-white transition-all"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <h3 className="text-lg font-semibold text-white mb-6">Add New Subject</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#8a8aa3] mb-1.5 uppercase tracking-wider">Subject Name</label>
+                <input
+                  type="text"
+                  value={form.subjectName}
+                  onChange={e => setForm({ ...form, subjectName: e.target.value })}
+                  placeholder="e.g. Operating Systems"
+                  className="w-full px-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#8a8aa3] mb-1.5 uppercase tracking-wider">Subject Code (Optional)</label>
+                <input
+                  type="text"
+                  value={form.subjectCode}
+                  onChange={e => setForm({ ...form, subjectCode: e.target.value })}
+                  placeholder="e.g. CS203"
+                  className="w-full px-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#8a8aa3] mb-1.5 uppercase tracking-wider">Theme Color</label>
+                <div className="flex flex-wrap gap-2">
+                  {COLOR_PRESETS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => setForm({ ...form, color: c.value })}
+                      className="w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center"
+                      style={{
+                        backgroundColor: c.value,
+                        borderColor: form.color === c.value ? '#ffffff' : 'transparent'
+                      }}
+                      title={c.label}
+                    >
+                      {form.color === c.value && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-white shadow-sm" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#8a8aa3] mb-1.5 uppercase tracking-wider">Classes Attended</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={form.totalClasses}
+                    value={form.classesAttended}
+                    onChange={e => setForm({ ...form, classesAttended: Math.max(0, parseInt(e.target.value) || 0) })}
+                    className="w-full px-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#8a8aa3] mb-1.5 uppercase tracking-wider">Total Classes</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={form.totalClasses}
+                    onChange={e => setForm({ ...form, totalClasses: Math.max(1, parseInt(e.target.value) || 1) })}
+                    className="w-full px-4 py-3 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] outline-none transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex gap-3">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 py-3 rounded-xl bg-[#2d2d42] text-[#8a8aa3] font-medium text-sm hover:text-white transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!form.subjectName.trim() || form.classesAttended > form.totalClasses}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#5b8def] to-[#4ecdc4] text-white font-semibold text-sm hover:shadow-lg transition-all disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
