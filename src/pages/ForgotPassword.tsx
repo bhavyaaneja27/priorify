@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Brain, Mail, ArrowLeft, Check, Send } from 'lucide-react';
+import { validateEmail } from '../lib/validation';
+
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -13,6 +15,10 @@ export default function ForgotPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    const emailResult = validateEmail(email);
+    if (!emailResult.valid) { setError(emailResult.error!); return; }
+
     setLoading(true);
     const { error } = await resetPassword(email);
     if (error) {
@@ -22,6 +28,7 @@ export default function ForgotPassword() {
     }
     setLoading(false);
   };
+
 
   return (
     <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4 relative overflow-hidden">

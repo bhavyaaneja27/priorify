@@ -36,10 +36,9 @@ export default function Sidebar() {
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? 'bg-accent-blue/10 text-accent-blue font-semibold'
-                  : 'text-dark-300 hover:text-dark-100 hover:bg-dark-800 border border-transparent'
+              `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
+                ? 'bg-accent-blue/10 text-accent-blue font-semibold'
+                : 'text-dark-300 hover:text-dark-100 hover:bg-dark-800 border border-transparent'
               }`
             }
           >

@@ -194,28 +194,35 @@ export function useAIPlans() {
   const { user } = useAuth();
   const [plans, setPlans] = useState<any[]>(aiPlans);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const isDemo = !user || user.isDemo;
 
   useEffect(() => {
     async function load() {
       setLoading(true);
+      setError(null);
       if (isDemo) {
         const saved = localStorage.getItem('ai_plans');
         if (saved) {
           try {
             setPlans(JSON.parse(saved));
-          } catch {}
+          } catch {
+            setPlans(aiPlans);
+          }
         } else {
           setPlans(aiPlans);
         }
       } else {
         try {
-          const { data, error } = await supabase
+          const { data, error: fetchError } = await supabase
             .from('ai_plans')
             .select('*')
             .eq('user_id', user.id);
-          if (data && !error) {
+          if (fetchError) {
+            console.error('[Supabase ai_plans] Fetch error:', fetchError);
+            setError('Failed to load your study plans. Please refresh.');
+          } else if (data) {
             setPlans(data.map(p => ({
               id: p.id,
               subject: p.subject,
@@ -226,68 +233,82 @@ export function useAIPlans() {
               schedule: p.schedule
             })));
           }
-        } catch {}
+        } catch (err: any) {
+          console.error('[Supabase ai_plans] Unexpected error:', err);
+          setError('An unexpected error occurred while loading plans.');
+        }
       }
       setLoading(false);
     }
     load();
   }, [user, isDemo]);
 
-  const savePlans = async (updater: any[] | ((prev: any[]) => any[])) => {
-    setPlans(prevPlans => {
-      const resolvedPlans = typeof updater === 'function' ? updater(prevPlans) : updater;
-      
-      const plansWithUuids = resolvedPlans.map(p => {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.id);
-        if (!isUuid) {
-          return { ...p, id: generateUUID() };
-        }
-        return p;
-      });
+  const savePlans = async (updater: any[] | ((prev: any[]) => any[])): Promise<{ error?: string }> => {
+    setError(null);
+    return new Promise((resolve) => {
+      setPlans(prevPlans => {
+        const resolvedPlans = typeof updater === 'function' ? updater(prevPlans) : updater;
 
-      if (isDemo) {
-        localStorage.setItem('ai_plans', JSON.stringify(plansWithUuids));
-      } else {
-        (async () => {
-          try {
-            console.log(`[Supabase ai_plans] Saving plans for user ${user.id}...`);
-            const { error: delError } = await supabase.from('ai_plans').delete().eq('user_id', user.id);
-            if (delError) {
-              console.error('[Supabase ai_plans] Error deleting existing plans:', delError);
-            }
-
-            const mapped = plansWithUuids.map(p => ({
-              id: p.id,
-              user_id: user.id,
-              subject: p.subject,
-              topic: p.topic,
-              difficulty: p.difficulty,
-              exam_date: p.examDate,
-              days_left: p.daysLeft,
-              schedule: p.schedule
-            }));
-
-            if (mapped.length > 0) {
-              const { error: insError } = await supabase.from('ai_plans').insert(mapped);
-              if (insError) {
-                console.error('[Supabase ai_plans] Error inserting plans:', insError);
-                alert('[Supabase ai_plans] Error inserting plans: ' + (insError.message || JSON.stringify(insError)));
-              } else {
-                console.log(`[Supabase ai_plans] Successfully saved ${mapped.length} plans.`);
-              }
-            }
-          } catch (err: any) {
-            console.error('[Supabase ai_plans] Catch error in savePlans:', err);
-            alert('[Supabase ai_plans] Catch error in savePlans: ' + (err.message || String(err)));
+        const plansWithUuids = resolvedPlans.map(p => {
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.id);
+          if (!isUuid) {
+            return { ...p, id: generateUUID() };
           }
-        })();
-      }
+          return p;
+        });
 
-      return plansWithUuids;
+        if (isDemo) {
+          localStorage.setItem('ai_plans', JSON.stringify(plansWithUuids));
+          resolve({});
+        } else {
+          (async () => {
+            try {
+              console.log(`[Supabase ai_plans] Saving plans for user ${user.id}...`);
+              const { error: delError } = await supabase.from('ai_plans').delete().eq('user_id', user.id);
+              if (delError) {
+                console.error('[Supabase ai_plans] Error deleting existing plans:', delError);
+              }
+
+              const mapped = plansWithUuids.map(p => ({
+                id: p.id,
+                user_id: user.id,
+                subject: p.subject,
+                topic: p.topic,
+                difficulty: p.difficulty,
+                exam_date: p.examDate,
+                days_left: p.daysLeft,
+                schedule: p.schedule
+              }));
+
+              if (mapped.length > 0) {
+                const { error: insError } = await supabase.from('ai_plans').insert(mapped);
+                if (insError) {
+                  console.error('[Supabase ai_plans] Error inserting plans:', insError);
+                  const msg = 'Failed to save your study plan. Please try again.';
+                  setError(msg);
+                  resolve({ error: msg });
+                } else {
+                  console.log(`[Supabase ai_plans] Successfully saved ${mapped.length} plans.`);
+                  resolve({});
+                }
+              } else {
+                resolve({});
+              }
+            } catch (err: any) {
+              console.error('[Supabase ai_plans] Catch error in savePlans:', err);
+              const msg = 'An unexpected error occurred while saving the plan.';
+              setError(msg);
+              resolve({ error: msg });
+            }
+          })();
+        }
+
+        return plansWithUuids;
+      });
     });
   };
 
-  return { plans, savePlans, loading };
+  return { plans, savePlans, loading, error };
 }
 
 // 4. Mood Check-In Hook

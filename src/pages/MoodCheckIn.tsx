@@ -280,7 +280,7 @@ function generateRecommendations(
   };
 
   const selectedTemplate = templates[moodValue] || templates['okay'];
-  
+
   // Fill the template slots using the user's subjects
   let subjectIdx = 0;
   const plan = selectedTemplate.planSlots.map(slot => {
@@ -376,11 +376,10 @@ export default function MoodCheckIn() {
             <button
               key={m.value}
               onClick={() => setSelectedMood(m.value, localStress, localFocus)}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 ${
-                selectedMood === m.value
-                  ? 'bg-dark-800 border-2 scale-105'
-                  : 'bg-dark-950 border border-dark-600 hover:border-dark-400'
-              }`}
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 ${selectedMood === m.value
+                ? 'bg-dark-800 border-2 scale-105'
+                : 'bg-dark-950 border border-dark-600 hover:border-dark-400'
+                }`}
               style={selectedMood === m.value ? { borderColor: m.color } : {}}
             >
               <span className="text-3xl">{m.emoji}</span>
@@ -517,33 +516,31 @@ export default function MoodCheckIn() {
                 {adjustment.plan.map((item, idx) => (
                   <div
                     key={idx}
-                    className={`flex items-center gap-4 p-3 rounded-xl border ${
-                      item.intensity === 'Rest'
-                        ? 'bg-accent-purple/5 border-accent-purple/20'
-                        : 'bg-dark-950 border-dark-600/30'
-                    }`}
+                    className={`flex items-center gap-4 p-3 rounded-xl border ${item.intensity === 'Rest'
+                      ? 'bg-accent-purple/5 border-accent-purple/20'
+                      : 'bg-dark-950 border-dark-600/30'
+                      }`}
                   >
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
                         backgroundColor: item.intensity === 'High' ? 'var(--accent-coral)20' :
                           item.intensity === 'Medium' ? 'var(--accent-amber)20' :
-                          item.intensity === 'Low' ? 'var(--accent-blue)20' : 'var(--accent-purple)20'
+                            item.intensity === 'Low' ? 'var(--accent-blue)20' : 'var(--accent-purple)20'
                       }}
                     >
                       {item.intensity === 'Rest' ? <Coffee className="w-5 h-5 text-accent-purple" /> :
-                       item.intensity === 'High' ? <Sun className="w-5 h-5 text-accent-coral" /> :
-                       item.intensity === 'Medium' ? <Wind className="w-5 h-5 text-accent-amber" /> :
-                       <Heart className="w-5 h-5 text-accent-blue" />}
+                        item.intensity === 'High' ? <Sun className="w-5 h-5 text-accent-coral" /> :
+                          item.intensity === 'Medium' ? <Wind className="w-5 h-5 text-accent-amber" /> :
+                            <Heart className="w-5 h-5 text-accent-blue" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold text-dark-100">{item.subject}</p>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${
-                          item.intensity === 'High' ? 'bg-accent-coral/10 text-accent-coral' :
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${item.intensity === 'High' ? 'bg-accent-coral/10 text-accent-coral' :
                           item.intensity === 'Medium' ? 'bg-accent-amber/10 text-accent-amber' :
-                          item.intensity === 'Low' ? 'bg-accent-blue/10 text-accent-blue' :
-                          'bg-accent-purple/10 text-accent-purple'
-                        }`}>{item.intensity}</span>
+                            item.intensity === 'Low' ? 'bg-accent-blue/10 text-accent-blue' :
+                              'bg-accent-purple/10 text-accent-purple'
+                          }`}>{item.intensity}</span>
                       </div>
                       <p className="text-xs text-dark-300 truncate">{item.topic}</p>
                     </div>

@@ -6,7 +6,8 @@
   animation: float 6s ease-in-out infinite;
 }
 
-:root, html.light {
+:root,
+html.light {
   /* Default: Warm Cream / Off-White Light Mode */
   --bg-primary: #FAF8F5;
   --bg-secondary: #FFFFFF;
@@ -52,7 +53,9 @@ html.dark {
   padding: 0;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -109,8 +112,15 @@ html, body, #root {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 .chart-tooltip {
@@ -121,7 +131,9 @@ html, body, #root {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   background: var(--bg-primary);
   border: 1.5px solid var(--border-color);
   color: var(--text-primary);
@@ -130,12 +142,15 @@ input, select, textarea {
   transition: all 0.2s;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--text-muted);
 }
 
@@ -143,36 +158,47 @@ input::placeholder, textarea::placeholder {
 .bg-\[\#0a0a0f\] {
   background-color: var(--bg-primary) !important;
 }
+
 .bg-\[\#12121a\] {
   background-color: var(--bg-secondary) !important;
 }
+
 .bg-\[\#1a1a24\] {
   background-color: var(--bg-secondary) !important;
 }
+
 .bg-\[\#1e1e2e\] {
   background-color: var(--bg-card-hover) !important;
 }
+
 .bg-\[\#1e1e2e\]\/60 {
   background-color: var(--bg-card-hover) !important;
 }
+
 .border-\[\#2d2d42\] {
   border-color: var(--border-color) !important;
 }
+
 .border-\[\#2d2d42\]\/50 {
   border-color: var(--border-color) !important;
 }
+
 .border-\[\#2d2d42\]\/20 {
   border-color: var(--border-color) !important;
 }
+
 .text-\[\#d0d0e0\] {
   color: var(--text-primary) !important;
 }
+
 .text-\[\#8a8aa3\] {
   color: var(--text-secondary) !important;
 }
+
 .text-\[\#5a5a7a\] {
   color: var(--text-muted) !important;
 }
+
 .text-\[\#e8e8f0\] {
   color: var(--text-primary) !important;
 }

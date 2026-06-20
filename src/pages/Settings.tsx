@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../hooks/usePersistence';
+import { validateProfileName, validateTextField } from '../lib/validation';
+
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
@@ -60,18 +62,42 @@ export default function Settings() {
 
   const handleSaveProfile = async () => {
     if (!profile) return;
+
+    // Validate before saving
+    const nameResult = validateProfileName(profileName);
+    if (!nameResult.valid) {
+      setSaveMessage(nameResult.error!);
+      return;
+    }
+    const uniResult = validateTextField(profileUniversity, 'University', 120);
+    if (!uniResult.valid) {
+      setSaveMessage(uniResult.error!);
+      return;
+    }
+    const yearResult = validateTextField(profileYear, 'Year', 30);
+    if (!yearResult.valid) {
+      setSaveMessage(yearResult.error!);
+      return;
+    }
+    const branchResult = validateTextField(profileBranch, 'Branch', 80);
+    if (!branchResult.valid) {
+      setSaveMessage(branchResult.error!);
+      return;
+    }
+
     const updated = {
       ...profile,
-      name: profileName,
-      university: profileUniversity,
-      year: profileYear,
-      branch: profileBranch,
-      avatar: profileName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+      name: profileName.trim(),
+      university: profileUniversity.trim(),
+      year: profileYear.trim(),
+      branch: profileBranch.trim(),
+      avatar: profileName.trim().split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     };
     await saveProfile(updated);
     setSaveMessage('Profile changes saved successfully!');
     setTimeout(() => setSaveMessage(''), 3000);
   };
+
 
   const applyTheme = (newTheme: 'dark' | 'light' | 'system') => {
     setTheme(newTheme);
@@ -115,11 +141,10 @@ export default function Settings() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20'
-                  : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800/40 border border-transparent'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id
+                ? 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20'
+                : 'text-dark-400 hover:text-dark-200 hover:bg-dark-800/40 border border-transparent'
+                }`}
             >
               <tab.icon className="w-[18px] h-[18px]" strokeWidth={2} />
               {tab.label}
@@ -250,13 +275,11 @@ export default function Settings() {
                     </div>
                     <button
                       onClick={() => setNotifications(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                      className={`w-11 h-6 rounded-full transition-all relative ${
-                        notifications[item.key] ? 'bg-accent-blue' : 'bg-dark-800 border border-dark-600'
-                      }`}
+                      className={`w-11 h-6 rounded-full transition-all relative ${notifications[item.key] ? 'bg-accent-blue' : 'bg-dark-800 border border-dark-600'
+                        }`}
                     >
-                      <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform absolute top-0.5 left-0.5 ${
-                        notifications[item.key] ? 'translate-x-6' : 'translate-x-0'
-                      }`} />
+                      <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform absolute top-0.5 left-0.5 ${notifications[item.key] ? 'translate-x-6' : 'translate-x-0'
+                        }`} />
                     </button>
                   </div>
                 ))}
@@ -306,9 +329,8 @@ export default function Settings() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button
                   onClick={() => applyTheme('dark')}
-                  className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all border-2 ${
-                    theme === 'dark' ? 'border-accent-blue bg-accent-blue/5' : 'border-dark-600 bg-dark-950 hover:border-dark-400'
-                  }`}
+                  className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all border-2 ${theme === 'dark' ? 'border-accent-blue bg-accent-blue/5' : 'border-dark-600 bg-dark-950 hover:border-dark-400'
+                    }`}
                 >
                   <div className="w-16 h-16 rounded-xl bg-dark-950 border border-dark-600 flex items-center justify-center">
                     <Moon className="w-8 h-8 text-dark-300" />
@@ -320,9 +342,8 @@ export default function Settings() {
                 </button>
                 <button
                   onClick={() => applyTheme('light')}
-                  className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all border-2 ${
-                    theme === 'light' ? 'border-accent-blue bg-accent-blue/5' : 'border-dark-600 bg-dark-950 hover:border-dark-400'
-                  }`}
+                  className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all border-2 ${theme === 'light' ? 'border-accent-blue bg-accent-blue/5' : 'border-dark-600 bg-dark-950 hover:border-dark-400'
+                    }`}
                 >
                   <div className="w-16 h-16 rounded-xl bg-white border border-dark-600 flex items-center justify-center">
                     <Sun className="w-8 h-8 text-accent-amber" />
@@ -334,9 +355,8 @@ export default function Settings() {
                 </button>
                 <button
                   onClick={() => applyTheme('system')}
-                  className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all border-2 ${
-                    theme === 'system' ? 'border-accent-blue bg-accent-blue/5' : 'border-dark-600 bg-dark-950 hover:border-dark-400'
-                  }`}
+                  className={`flex flex-col items-center gap-3 p-6 rounded-xl transition-all border-2 ${theme === 'system' ? 'border-accent-blue bg-accent-blue/5' : 'border-dark-600 bg-dark-950 hover:border-dark-400'
+                    }`}
                 >
                   <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-dark-950 to-white border border-dark-600 flex items-center justify-center">
                     <Laptop className="w-8 h-8 text-accent-blue" />

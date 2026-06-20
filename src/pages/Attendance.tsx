@@ -8,6 +8,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line
 } from 'recharts';
 import { useAttendance, useSubjects } from '../hooks/usePersistence';
+import { validateSubjectName, validateSubjectCode, validateAttendanceCounts } from '../lib/validation';
+
 
 const COLOR_PRESETS = [
   { value: '#5b8def', label: 'Blue' },
@@ -35,9 +37,10 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 export default function Attendance() {
   const { attendanceList, saveAttendance, loading: loadingAttendance } = useAttendance();
   const { subjectsList, saveSubjects, loading: loadingSubjects } = useSubjects();
-  
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [bunkInput, setBunkInput] = useState<{ [key: string]: number }>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState({
     subjectName: '',
     subjectCode: '',
@@ -45,6 +48,7 @@ export default function Attendance() {
     classesAttended: 0,
     totalClasses: 1
   });
+
 
   const loading = loadingAttendance || loadingSubjects;
 
@@ -67,12 +71,20 @@ export default function Attendance() {
   };
 
   const handleSubmit = async () => {
-    if (!form.subjectName.trim()) return;
+    setFormError(null);
+
+    // Validate all fields before saving
+    const nameResult = validateSubjectName(form.subjectName);
+    if (!nameResult.valid) { setFormError(nameResult.error!); return; }
+    const codeResult = validateSubjectCode(form.subjectCode);
+    if (!codeResult.valid) { setFormError(codeResult.error!); return; }
+    const countsResult = validateAttendanceCounts(form.classesAttended, form.totalClasses);
+    if (!countsResult.valid) { setFormError(countsResult.error!); return; }
 
     // 1. Save to attendanceList
     const newAttendanceItem = {
       id: Date.now().toString(),
-      subject: form.subjectName,
+      subject: form.subjectName.trim(),
       present: form.classesAttended,
       total: form.totalClasses,
       color: form.color
@@ -81,8 +93,8 @@ export default function Attendance() {
     // 2. Save to subjectsList
     const newSubjectItem = {
       id: Date.now().toString(),
-      name: form.subjectName,
-      code: form.subjectCode || '',
+      name: form.subjectName.trim(),
+      code: form.subjectCode.trim() || '',
       color: form.color,
       totalHours: 40,
       completedHours: 0,
@@ -100,8 +112,10 @@ export default function Attendance() {
       classesAttended: 0,
       totalClasses: 1
     });
+    setFormError(null);
     setShowAddModal(false);
   };
+
 
   // Generate dynamic weekly trends based on current overall attendance
   const dynamicTrends = [
@@ -430,9 +444,15 @@ export default function Attendance() {
               </div>
             </div>
 
-            <div className="mt-8 flex gap-3">
+            {formError && (
+              <div className="mt-4 px-4 py-2.5 rounded-xl bg-accent-coral/10 border border-accent-coral/20 text-xs text-accent-coral">
+                {formError}
+              </div>
+            )}
+
+            <div className="mt-4 flex gap-3">
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => { setShowAddModal(false); setFormError(null); }}
                 className="flex-1 py-2.5 rounded-xl bg-dark-800 border border-dark-600 text-dark-200 font-medium text-sm hover:bg-dark-700 transition-all"
               >
                 Cancel
@@ -445,6 +465,7 @@ export default function Attendance() {
                 Create
               </button>
             </div>
+
           </motion.div>
         </div>
       )}

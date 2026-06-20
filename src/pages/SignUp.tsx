@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Brain, Eye, EyeOff, Mail, Lock, User, ArrowRight, Chrome, Check } from 'lucide-react';
+import { validateEmail, validatePassword, validateName } from '../lib/validation';
+
 
 export default function SignUp() {
   const [name, setName] = useState('');
@@ -17,6 +19,15 @@ export default function SignUp() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Client-side validation before hitting Supabase
+    const nameResult = validateName(name);
+    if (!nameResult.valid) { setError(nameResult.error!); return; }
+    const emailResult = validateEmail(email);
+    if (!emailResult.valid) { setError(emailResult.error!); return; }
+    const pwResult = validatePassword(password);
+    if (!pwResult.valid) { setError(pwResult.error!); return; }
+
     setLoading(true);
     const { error } = await signUp(email, password, name);
     if (error) {
@@ -26,6 +37,7 @@ export default function SignUp() {
     }
     setLoading(false);
   };
+
 
   const handleGoogle = async () => {
     const { error } = await signInWithGoogle();

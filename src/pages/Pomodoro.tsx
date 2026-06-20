@@ -76,7 +76,7 @@ export default function Pomodoro() {
       const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-500.wav');
       audio.volume = 0.5;
       audio.play();
-    } catch {}
+    } catch { }
   };
 
   const sendNotification = (title: string, body: string) => {
@@ -188,11 +188,10 @@ export default function Pomodoro() {
           </button>
           <button
             onClick={() => setIsRunning(!isRunning)}
-            className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all hover:scale-105 ${
-              isRunning
-                ? 'bg-accent-coral/10 text-accent-coral border border-accent-coral/30'
-                : 'bg-accent-blue text-white shadow-sm hover:bg-accent-blue/90'
-            }`}
+            className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all hover:scale-105 ${isRunning
+              ? 'bg-accent-coral/10 text-accent-coral border border-accent-coral/30'
+              : 'bg-accent-blue text-white shadow-sm hover:bg-accent-blue/90'
+              }`}
           >
             {isRunning ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
           </button>

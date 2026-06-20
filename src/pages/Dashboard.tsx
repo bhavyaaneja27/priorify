@@ -305,8 +305,8 @@ export default function Dashboard() {
                 key={mood}
                 onClick={() => setSelectedMood(mood)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all border ${selectedMood === mood
-                    ? 'bg-dark-800 border-dark-600'
-                    : 'bg-transparent border-transparent hover:bg-dark-800'
+                  ? 'bg-dark-800 border-dark-600'
+                  : 'bg-transparent border-transparent hover:bg-dark-800'
                   }`}
               >
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg" style={{ backgroundColor: moodColors[mood] + '20' }}>
@@ -352,8 +352,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-dark-100 truncate">{item.subject}</p>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${item.priority === 'high' ? 'bg-accent-coral/10 text-accent-coral border border-accent-coral/10' :
-                          item.priority === 'medium' ? 'bg-accent-amber/10 text-accent-amber border border-accent-amber/10' :
-                            'bg-accent-green/10 text-accent-green border border-accent-green/10'
+                        item.priority === 'medium' ? 'bg-accent-amber/10 text-accent-amber border border-accent-amber/10' :
+                          'bg-accent-green/10 text-accent-green border border-accent-green/10'
                         }`}>{item.priority}</span>
                     </div>
                     <p className="text-xs text-dark-300 truncate">{item.topic}</p>
@@ -403,19 +403,19 @@ export default function Dashboard() {
             <div
               key={ach.id}
               className={`flex flex-col items-center gap-2.5 p-4 rounded-xl text-center transition-all ${ach.unlocked
-                  ? 'bg-accent-blue/5 border border-accent-blue/20'
-                  : 'bg-dark-900 border border-dark-600 opacity-50'
+                ? 'bg-accent-blue/5 border border-accent-blue/20'
+                : 'bg-dark-900 border border-dark-600 opacity-50'
                 }`}
             >
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${ach.unlocked
-                  ? ach.icon === 'flame' || ach.icon === 'sun' || ach.icon === 'crown'
-                    ? 'bg-accent-amber/10 text-accent-amber border border-accent-amber/20'
-                    : ach.icon === 'check'
-                      ? 'bg-accent-green/10 text-accent-green border border-accent-green/20'
-                      : ach.icon === 'sparkles'
-                        ? 'bg-accent-purple/10 text-accent-purple border border-accent-purple/20'
-                        : 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20'
-                  : 'bg-dark-800 text-dark-400'
+                ? ach.icon === 'flame' || ach.icon === 'sun' || ach.icon === 'crown'
+                  ? 'bg-accent-amber/10 text-accent-amber border border-accent-amber/20'
+                  : ach.icon === 'check'
+                    ? 'bg-accent-green/10 text-accent-green border border-accent-green/20'
+                    : ach.icon === 'sparkles'
+                      ? 'bg-accent-purple/10 text-accent-purple border border-accent-purple/20'
+                      : 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20'
+                : 'bg-dark-800 text-dark-400'
                 }`}>
                 {ach.icon === 'flame' && <Flame className="w-5 h-5" />}
                 {ach.icon === 'target' && <Zap className="w-5 h-5" />}

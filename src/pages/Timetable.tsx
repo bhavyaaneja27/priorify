@@ -30,10 +30,10 @@ function getTopOffset(timeString: string): number {
 function getPositionedSlots(slots: Slot[]): PositionedSlot[] {
   if (!slots) return [];
   const sorted = [...slots].sort((a, b) => getTopOffset(a.time) - getTopOffset(b.time));
-  
+
   const positioned: PositionedSlot[] = [];
-  const columns: number[][] = []; 
-  
+  const columns: number[][] = [];
+
   const slotsWithTimes = sorted.map(slot => {
     const top = getTopOffset(slot.time);
     const duration = slot.duration || 90;
@@ -42,7 +42,7 @@ function getPositionedSlots(slots: Slot[]): PositionedSlot[] {
   });
 
   const slotCols = new Array(slotsWithTimes.length).fill(0);
-  
+
   for (let i = 0; i < slotsWithTimes.length; i++) {
     const item = slotsWithTimes[i];
     let colAssigned = false;
@@ -81,7 +81,7 @@ function getPositionedSlots(slots: Slot[]): PositionedSlot[] {
     const totalCols = slotWidthGroups[i];
     const widthPct = 100 / totalCols;
     const leftPct = col * widthPct;
-    
+
     positioned.push({
       ...slot,
       top,
@@ -95,6 +95,8 @@ function getPositionedSlots(slots: Slot[]): PositionedSlot[] {
 }
 
 import { useTimetable } from '../hooks/usePersistence';
+import { validateTimetableSlot } from '../lib/validation';
+
 
 export default function Timetable() {
   const { schedule, saveSchedule: setSchedule, loading } = useTimetable();
@@ -102,6 +104,8 @@ export default function Timetable() {
   const [newSlot, setNewSlot] = useState({ day: 'Monday', time: '09:00', subject: '', room: '', color: '#5b8def' });
   const [draggedItem, setDraggedItem] = useState<{ day: string; slot: Slot } | null>(null);
   const [dragOverCell, setDragOverCell] = useState<{ day: string; time: string } | null>(null);
+  const [slotError, setSlotError] = useState<string | null>(null);
+
 
   if (loading) {
     return (
@@ -113,17 +117,22 @@ export default function Timetable() {
   }
 
   const handleAdd = () => {
-    if (!newSlot.subject || !newSlot.room) return;
+    setSlotError(null);
+    const validation = validateTimetableSlot(newSlot.subject, newSlot.room);
+    if (!validation.valid) { setSlotError(validation.error!); return; }
+
     setSchedule(prev => {
       const exists = prev.find(d => d.day === newSlot.day);
       if (exists) {
-        return prev.map(d => d.day === newSlot.day ? { ...d, slots: [...d.slots, { time: newSlot.time, subject: newSlot.subject, room: newSlot.room, color: newSlot.color }] } : d);
+        return prev.map(d => d.day === newSlot.day ? { ...d, slots: [...d.slots, { time: newSlot.time, subject: newSlot.subject.trim(), room: newSlot.room.trim(), color: newSlot.color }] } : d);
       }
-      return [...prev, { day: newSlot.day, slots: [{ time: newSlot.time, subject: newSlot.subject, room: newSlot.room, color: newSlot.color }] }];
+      return [...prev, { day: newSlot.day, slots: [{ time: newSlot.time, subject: newSlot.subject.trim(), room: newSlot.room.trim(), color: newSlot.color }] }];
     });
     setShowAdd(false);
+    setSlotError(null);
     setNewSlot({ day: 'Monday', time: '09:00', subject: '', room: '', color: '#5b8def' });
   };
+
 
   const handleDelete = (day: string, time: string) => {
     setSchedule(prev => prev.map(d => d.day === day ? { ...d, slots: d.slots.filter((s: Slot) => s.time !== time) } : d));
@@ -195,21 +204,27 @@ export default function Timetable() {
       {showAdd && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 border border-dark-600">
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-            <select value={newSlot.day} onChange={e => setNewSlot({ ...newSlot, day: e.target.value })} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none">
+            <select value={newSlot.day} onChange={e => { setNewSlot({ ...newSlot, day: e.target.value }); setSlotError(null); }} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none">
               {days.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
             <select value={newSlot.time} onChange={e => setNewSlot({ ...newSlot, time: e.target.value })} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none">
               {timeSlots.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
-            <input value={newSlot.subject} onChange={e => setNewSlot({ ...newSlot, subject: e.target.value })} placeholder="Subject" className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none" />
-            <input value={newSlot.room} onChange={e => setNewSlot({ ...newSlot, room: e.target.value })} placeholder="Room" className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none" />
+            <input value={newSlot.subject} onChange={e => { setNewSlot({ ...newSlot, subject: e.target.value }); setSlotError(null); }} placeholder="Subject" maxLength={80} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none" />
+            <input value={newSlot.room} onChange={e => { setNewSlot({ ...newSlot, room: e.target.value }); setSlotError(null); }} placeholder="Room" maxLength={80} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none" />
             <div className="flex gap-2">
               <button onClick={handleAdd} className="flex-1 py-2.5 rounded-xl bg-accent-blue text-white font-medium text-sm hover:bg-accent-blue/90">Add</button>
-              <button onClick={() => setShowAdd(false)} className="px-3 py-2.5 rounded-xl bg-dark-800 border border-dark-600 text-dark-300 hover:text-dark-100"><X className="w-4 h-4" /></button>
+              <button onClick={() => { setShowAdd(false); setSlotError(null); }} className="px-3 py-2.5 rounded-xl bg-dark-800 border border-dark-600 text-dark-300 hover:text-dark-100"><X className="w-4 h-4" /></button>
             </div>
           </div>
+          {slotError && (
+            <div className="mt-3 px-3 py-2 rounded-lg bg-accent-coral/10 border border-accent-coral/20 text-xs text-accent-coral">
+              {slotError}
+            </div>
+          )}
         </motion.div>
       )}
+
 
       {/* Mobile view */}
       <div className="lg:hidden space-y-4">
@@ -258,7 +273,7 @@ export default function Timetable() {
             const daySlots = schedule.find(d => d.day === day)?.slots || [];
             const positionedSlots = getPositionedSlots(daySlots);
             return (
-              <div key={day} className="absolute border-r border-dark-600/50" style={{ left: `${(100/7) + dayIdx * (100/7)}%`, width: `${100/7}%`, height: '100%' }}>
+              <div key={day} className="absolute border-r border-dark-600/50" style={{ left: `${(100 / 7) + dayIdx * (100 / 7)}%`, width: `${100 / 7}%`, height: '100%' }}>
                 {/* Hourly Drop Targets */}
                 {timeSlots.map((time, i) => {
                   const isHovered = dragOverCell?.day === day && dragOverCell?.time === time;
@@ -269,11 +284,10 @@ export default function Timetable() {
                       onDragEnter={(e) => handleDragEnter(e, day, time)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, day, time)}
-                      className={`absolute left-0 right-0 h-[60px] transition-all border-b border-dashed border-dark-600/10 ${
-                        isHovered
-                          ? 'bg-accent-blue/10 border-2 border-dashed border-accent-blue/30 z-10'
-                          : 'hover:bg-accent-blue/5'
-                      }`}
+                      className={`absolute left-0 right-0 h-[60px] transition-all border-b border-dashed border-dark-600/10 ${isHovered
+                        ? 'bg-accent-blue/10 border-2 border-dashed border-accent-blue/30 z-10'
+                        : 'hover:bg-accent-blue/5'
+                        }`}
                       style={{ top: `${i * 60}px` }}
                     />
                   );
