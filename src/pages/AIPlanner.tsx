@@ -28,7 +28,7 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
   );
 }
 
-import { useAIPlans } from '../hooks/usePersistence';
+import { useAIPlans, generateUUID } from '../hooks/usePersistence';
 import { generateStudyPlan } from '../lib/gemini';
 
 export default function AIPlanner() {
@@ -90,7 +90,7 @@ export default function AIPlanner() {
     }
 
     const newPlan: PlanItem = {
-      id: Date.now().toString(),
+      id: generateUUID(),
       subject: formData.subject,
       topic: formData.topic,
       difficulty: formData.difficulty,

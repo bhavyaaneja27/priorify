@@ -16,6 +16,7 @@ import {
   useAIPlans 
 } from '../hooks/usePersistence';
 
+
 function CircularProgress({ value, color, size = 56, strokeWidth = 5, label }: { value: number; color: string; size?: number; strokeWidth?: number; label: string }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -127,12 +128,27 @@ export default function Dashboard() {
     color: s.color
   })) : [];
 
+
+
   // 4. Today's AI Plan
   const latestPlan = plans && plans.length > 0 ? plans[plans.length - 1] : null;
   const currentDayItem = latestPlan ? latestPlan.schedule.find((d: any) => !d.completed) || latestPlan.schedule[0] : null;
   
+  const getGreeting = (name: string) => {
+    const hour = new Date().getHours();
+    let greetingPrefix = 'Good night';
+    if (hour >= 5 && hour < 12) {
+      greetingPrefix = 'Good morning';
+    } else if (hour >= 12 && hour < 17) {
+      greetingPrefix = 'Good afternoon';
+    } else if (hour >= 17 && hour < 21) {
+      greetingPrefix = 'Good evening';
+    }
+    return `${greetingPrefix}, ${name}!`;
+  };
+
   const todayAIPlan = {
-    greeting: `Good morning, ${profile.name}!`,
+    greeting: getGreeting(profile.name),
     mood: selectedMood,
     totalDuration: currentDayItem ? currentDayItem.hours * 60 : 0,
     breaks: currentDayItem ? Math.max(1, currentDayItem.hours - 1) : 0,

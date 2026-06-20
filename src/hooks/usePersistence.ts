@@ -19,6 +19,17 @@ const groupSlotsByDay = (flatSlots: any[]) => {
   }));
 };
 
+export const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 // 1. Timetable Hook
 export function useTimetable() {
   const { user } = useAuth();
@@ -223,46 +234,57 @@ export function useAIPlans() {
   }, [user, isDemo]);
 
   const savePlans = async (updater: any[] | ((prev: any[]) => any[])) => {
-    const resolvedPlans = typeof updater === 'function' ? updater(plans) : updater;
-    setPlans(resolvedPlans);
-
-    if (isDemo) {
-      localStorage.setItem('ai_plans', JSON.stringify(resolvedPlans));
-    } else {
-      try {
-        console.log(`[Supabase ai_plans] Saving plans for user ${user.id}...`);
-        const { error: delError } = await supabase.from('ai_plans').delete().eq('user_id', user.id);
-        if (delError) {
-          console.error('[Supabase ai_plans] Error deleting existing plans:', delError);
+    setPlans(prevPlans => {
+      const resolvedPlans = typeof updater === 'function' ? updater(prevPlans) : updater;
+      
+      const plansWithUuids = resolvedPlans.map(p => {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.id);
+        if (!isUuid) {
+          return { ...p, id: generateUUID() };
         }
+        return p;
+      });
 
-        const mapped = resolvedPlans.map(p => {
-          const planObj: any = {
-            user_id: user.id,
-            subject: p.subject,
-            topic: p.topic,
-            difficulty: p.difficulty,
-            exam_date: p.examDate,
-            days_left: p.daysLeft,
-            schedule: p.schedule
-          };
-          if (p.id && String(p.id).length > 20) {
-            planObj.id = p.id;
+      if (isDemo) {
+        localStorage.setItem('ai_plans', JSON.stringify(plansWithUuids));
+      } else {
+        (async () => {
+          try {
+            console.log(`[Supabase ai_plans] Saving plans for user ${user.id}...`);
+            const { error: delError } = await supabase.from('ai_plans').delete().eq('user_id', user.id);
+            if (delError) {
+              console.error('[Supabase ai_plans] Error deleting existing plans:', delError);
+            }
+
+            const mapped = plansWithUuids.map(p => ({
+              id: p.id,
+              user_id: user.id,
+              subject: p.subject,
+              topic: p.topic,
+              difficulty: p.difficulty,
+              exam_date: p.examDate,
+              days_left: p.daysLeft,
+              schedule: p.schedule
+            }));
+
+            if (mapped.length > 0) {
+              const { error: insError } = await supabase.from('ai_plans').insert(mapped);
+              if (insError) {
+                console.error('[Supabase ai_plans] Error inserting plans:', insError);
+                alert('[Supabase ai_plans] Error inserting plans: ' + (insError.message || JSON.stringify(insError)));
+              } else {
+                console.log(`[Supabase ai_plans] Successfully saved ${mapped.length} plans.`);
+              }
+            }
+          } catch (err: any) {
+            console.error('[Supabase ai_plans] Catch error in savePlans:', err);
+            alert('[Supabase ai_plans] Catch error in savePlans: ' + (err.message || String(err)));
           }
-          return planObj;
-        });
-        if (mapped.length > 0) {
-          const { error: insError } = await supabase.from('ai_plans').insert(mapped);
-          if (insError) {
-            console.error('[Supabase ai_plans] Error inserting plans:', insError);
-          } else {
-            console.log(`[Supabase ai_plans] Successfully saved ${mapped.length} plans.`);
-          }
-        }
-      } catch (err) {
-        console.error('[Supabase ai_plans] Catch error in savePlans:', err);
+        })();
       }
-    }
+
+      return plansWithUuids;
+    });
   };
 
   return { plans, savePlans, loading };
@@ -271,7 +293,7 @@ export function useAIPlans() {
 // 4. Mood Check-In Hook
 export function useMood() {
   const { user } = useAuth();
-  const [selectedMood, setSelectedMood] = useState('okay');
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [stressLevel, setStressLevel] = useState(5.0);
   const [focusLevel, setFocusLevel] = useState(5.0);
   const [loading, setLoading] = useState(true);
@@ -285,7 +307,11 @@ export function useMood() {
         const saved = localStorage.getItem('today_mood');
         const savedStress = localStorage.getItem('today_stress');
         const savedFocus = localStorage.getItem('today_focus');
-        if (saved) setSelectedMood(saved);
+        if (saved) {
+          setSelectedMood(saved);
+        } else {
+          setSelectedMood('okay');
+        }
         if (savedStress) setStressLevel(parseFloat(savedStress));
         if (savedFocus) setFocusLevel(parseFloat(savedFocus));
       } else {
@@ -301,15 +327,19 @@ export function useMood() {
             setSelectedMood(data.mood_value);
             setStressLevel(data.stress_level ?? 5.0);
             setFocusLevel(data.focus_level ?? 5.0);
+          } else {
+            setSelectedMood(null);
           }
-        } catch {}
+        } catch {
+          setSelectedMood(null);
+        }
       }
       setLoading(false);
     }
     load();
   }, [user, isDemo]);
 
-  const saveMood = async (newMood: string, stress?: number, focus?: number) => {
+  const saveMood = async (newMood: string | null, stress?: number, focus?: number) => {
     setSelectedMood(newMood);
     const finalStress = stress !== undefined ? stress : stressLevel;
     const finalFocus = focus !== undefined ? focus : focusLevel;
@@ -317,7 +347,11 @@ export function useMood() {
     setFocusLevel(finalFocus);
 
     if (isDemo) {
-      localStorage.setItem('today_mood', newMood);
+      if (newMood) {
+        localStorage.setItem('today_mood', newMood);
+      } else {
+        localStorage.removeItem('today_mood');
+      }
       localStorage.setItem('today_stress', finalStress.toString());
       localStorage.setItem('today_focus', finalFocus.toString());
     } else {
@@ -328,13 +362,15 @@ export function useMood() {
           .delete()
           .eq('user_id', user.id)
           .eq('date', todayStr);
-        await supabase.from('mood_history').insert({
-          user_id: user.id,
-          date: todayStr,
-          mood_value: newMood,
-          stress_level: finalStress,
-          focus_level: finalFocus
-        });
+        if (newMood) {
+          await supabase.from('mood_history').insert({
+            user_id: user.id,
+            date: todayStr,
+            mood_value: newMood,
+            stress_level: finalStress,
+            focus_level: finalFocus
+          });
+        }
       } catch {}
     }
   };

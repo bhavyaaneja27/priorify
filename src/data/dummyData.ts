@@ -85,7 +85,7 @@ export const timetableSlots = [
 
 export const aiPlans = [
   {
-    id: '1',
+    id: '11111111-1111-4111-a111-111111111111',
     subject: 'Data Structures',
     topic: 'Binary Trees & BST',
     difficulty: 'Hard',
@@ -100,7 +100,7 @@ export const aiPlans = [
     ]
   },
   {
-    id: '2',
+    id: '22222222-2222-4222-b222-222222222222',
     subject: 'Operating Systems',
     topic: 'Process Scheduling',
     difficulty: 'Medium',
