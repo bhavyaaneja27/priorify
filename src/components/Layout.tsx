@@ -11,7 +11,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="min-h-screen bg-dark-950">
       {/* Sidebar: hidden on mobile, fixed on desktop */}
       <div className="hidden lg:block">
         <Sidebar />

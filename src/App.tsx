@@ -31,7 +31,7 @@ function App() {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
     function apply() {
-      const savedTheme = localStorage.getItem('theme') || 'dark';
+      const savedTheme = localStorage.getItem('theme') || 'light';
       let resolvedTheme = savedTheme;
       if (savedTheme === 'system') {
         resolvedTheme = mediaQuery.matches ? 'dark' : 'light';
@@ -55,9 +55,9 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-4">
-        <div className="w-10 h-10 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-[#5a5a7a]">Loading...</p>
+      <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center gap-4">
+        <div className="w-10 h-10 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-dark-400">Loading...</p>
       </div>
     );
   }

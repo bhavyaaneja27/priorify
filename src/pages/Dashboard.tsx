@@ -6,14 +6,14 @@ import {
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts';
-import { 
-  useMood, 
-  useMoodHistory, 
-  useUserProfile, 
-  useSubjects, 
-  useTimetable, 
-  usePomodoroHistory, 
-  useAIPlans 
+import {
+  useMood,
+  useMoodHistory,
+  useUserProfile,
+  useSubjects,
+  useTimetable,
+  usePomodoroHistory,
+  useAIPlans
 } from '../hooks/usePersistence';
 
 
@@ -32,10 +32,10 @@ function CircularProgress({ value, color, size = 56, strokeWidth = 5, label }: {
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-bold text-white">{value}%</span>
+          <span className="text-xs font-bold text-dark-100">{value}%</span>
         </div>
       </div>
-      <span className="text-xs text-[#8a8aa3] text-center leading-tight max-w-[80px]">{label}</span>
+      <span className="text-xs text-dark-300 text-center leading-tight max-w-[80px]">{label}</span>
     </div>
   );
 }
@@ -43,9 +43,9 @@ function CircularProgress({ value, color, size = 56, strokeWidth = 5, label }: {
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.3 }}
       className={`glass-card rounded-2xl p-5 ${className}`}
     >
       {children}
@@ -56,12 +56,12 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle?: string }) {
   return (
     <div className="flex items-center gap-2 mb-4">
-      <div className="w-8 h-8 rounded-lg bg-[#5b8def]/10 flex items-center justify-center">
-        <Icon className="w-4 h-4 text-[#5b8def]" />
+      <div className="w-8 h-8 rounded-lg bg-accent-blue/10 border border-accent-blue/10 flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-accent-blue" />
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-[#d0d0e0]">{title}</h3>
-        {subtitle && <p className="text-xs text-[#5a5a7a]">{subtitle}</p>}
+        <h3 className="text-sm font-semibold text-dark-100">{title}</h3>
+        {subtitle && <p className="text-xs text-dark-400">{subtitle}</p>}
       </div>
     </div>
   );
@@ -76,14 +76,14 @@ export default function Dashboard() {
   const { history: pomoHistory, loading: loadingPomo } = usePomodoroHistory();
   const { plans, loading: loadingPlans } = useAIPlans();
 
-  const moodColors: Record<string, string> = { great: '#2ecc71', okay: '#5b8def', tired: '#f4a261', stressed: '#ff6b6b', overwhelmed: '#e84393' };
+  const moodColors: Record<string, string> = { great: 'var(--accent-green)', okay: 'var(--accent-blue)', tired: 'var(--accent-amber)', stressed: 'var(--accent-coral)', overwhelmed: 'var(--accent-pink)' };
   const moodLabels: Record<string, string> = { great: 'Feeling amazing!', okay: 'Decent energy.', tired: 'Take short breaks.', stressed: 'Try breathing exercises.', overwhelmed: 'Focus on one thing.' };
 
   if (loadingProfile || loadingSubjects || loadingTimetable || loadingMoodHistory || loadingMood || loadingPomo || loadingPlans || !profile) {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3">
-        <div className="w-8 h-8 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-[#5a5a7a]">Loading dashboard...</p>
+        <div className="w-8 h-8 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-dark-400">Loading dashboard...</p>
       </div>
     );
   }
@@ -133,7 +133,7 @@ export default function Dashboard() {
   // 4. Today's AI Plan
   const latestPlan = plans && plans.length > 0 ? plans[plans.length - 1] : null;
   const currentDayItem = latestPlan ? latestPlan.schedule.find((d: any) => !d.completed) || latestPlan.schedule[0] : null;
-  
+
   const getGreeting = (name: string) => {
     const hour = new Date().getHours();
     let greetingPrefix = 'Good night';
@@ -179,8 +179,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{todayAIPlan.greeting}</h1>
-          <p className="text-sm text-[#8a8aa3] mt-1">
+          <h1 className="text-2xl font-bold text-dark-100">{todayAIPlan.greeting}</h1>
+          <p className="text-sm text-dark-300 mt-1">
             <span className="inline-flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5" />
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -188,13 +188,13 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f4a261]/10 border border-[#f4a261]/20">
-            <Flame className="w-4 h-4 text-[#f4a261]" />
-            <span className="text-sm font-semibold text-[#f4a261]">{profile.streak} day streak</span>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-amber/10 border border-accent-amber/20">
+            <Flame className="w-4 h-4 text-accent-amber" />
+            <span className="text-sm font-semibold text-accent-amber">{profile.streak} day streak</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#5b8def]/10 border border-[#5b8def]/20">
-            <Zap className="w-4 h-4 text-[#5b8def]" />
-            <span className="text-sm font-semibold text-[#5b8def]">{profile.totalXP} XP</span>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-blue/10 border border-accent-blue/20">
+            <Zap className="w-4 h-4 text-accent-blue" />
+            <span className="text-sm font-semibold text-accent-blue">{profile.totalXP} XP</span>
           </div>
         </div>
       </div>
@@ -206,7 +206,7 @@ export default function Dashboard() {
           <SectionTitle icon={TrendingUp} title="Subject Progress" subtitle="Your learning journey across all subjects" />
           <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
             {subjects.length === 0 ? (
-              <p className="text-sm text-[#8a8aa3] py-4">No active subjects. Add them via settings or logs.</p>
+              <p className="text-sm text-dark-300 py-4">No active subjects. Add them via settings or logs.</p>
             ) : (
               subjects.map((s) => (
                 <CircularProgress key={s.id} value={s.progress} color={s.color} label={s.name} />
@@ -218,37 +218,37 @@ export default function Dashboard() {
         {/* Quick Stats */}
         <Card>
           <SectionTitle icon={Award} title="Quick Stats" />
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#12121a]">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-dark-900 border border-dark-600">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#5b8def]/10 flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-[#5b8def]" />
+                <div className="w-9 h-9 rounded-lg bg-accent-blue/10 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-accent-blue" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">{profile.totalHours}h</p>
-                  <p className="text-xs text-[#5a5a7a]">Total study time</p>
+                  <p className="text-sm font-semibold text-dark-100">{profile.totalHours}h</p>
+                  <p className="text-xs text-dark-400">Total study time</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#12121a]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-dark-900 border border-dark-600">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#2ecc71]/10 flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-[#2ecc71]" />
+                <div className="w-9 h-9 rounded-lg bg-accent-teal/10 flex items-center justify-center">
+                  <BookOpen className="w-4 h-4 text-accent-teal" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">{subjects.length}</p>
-                  <p className="text-xs text-[#5a5a7a]">Active subjects</p>
+                  <p className="text-sm font-semibold text-dark-100">{subjects.length}</p>
+                  <p className="text-xs text-dark-400">Active subjects</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#12121a]">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-dark-900 border border-dark-600">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[#f4a261]/10 flex items-center justify-center">
-                  <Sun className="w-4 h-4 text-[#f4a261]" />
+                <div className="w-9 h-9 rounded-lg bg-accent-amber/10 flex items-center justify-center">
+                  <Sun className="w-4 h-4 text-accent-amber" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Level {profile.level}</p>
-                  <p className="text-xs text-[#5a5a7a]">Current level</p>
+                  <p className="text-sm font-semibold text-dark-100">Level {profile.level}</p>
+                  <p className="text-xs text-dark-400">Current level</p>
                 </div>
               </div>
             </div>
@@ -271,7 +271,7 @@ export default function Dashboard() {
                   contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12, color: 'var(--text-primary)' }}
                   formatter={(val: any) => [`${val} hours`, 'Study Time']}
                 />
-                <Bar dataKey="hours" fill="#5b8def" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="hours" fill="var(--accent-blue)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -289,8 +289,8 @@ export default function Dashboard() {
                 <Tooltip
                   contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12, color: 'var(--text-primary)' }}
                 />
-                <Area type="monotone" dataKey="stress" stroke="#ff6b6b" fill="#ff6b6b" fillOpacity={0.15} strokeWidth={2} />
-                <Area type="monotone" dataKey="focus" stroke="#4ecdc4" fill="#4ecdc4" fillOpacity={0.15} strokeWidth={2} />
+                <Area type="monotone" dataKey="stress" stroke="var(--accent-coral)" fill="var(--accent-coral)" fillOpacity={0.12} strokeWidth={2} />
+                <Area type="monotone" dataKey="focus" stroke="var(--accent-teal)" fill="var(--accent-teal)" fillOpacity={0.12} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -304,11 +304,10 @@ export default function Dashboard() {
               <button
                 key={mood}
                 onClick={() => setSelectedMood(mood)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
-                  selectedMood === mood
-                    ? 'bg-[#1e1e2e] border border-[#2d2d42]'
-                    : 'hover:bg-[#12121a]'
-                }`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all border ${selectedMood === mood
+                    ? 'bg-dark-800 border-dark-600'
+                    : 'bg-transparent border-transparent hover:bg-dark-800'
+                  }`}
               >
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg" style={{ backgroundColor: moodColors[mood] + '20' }}>
                   {mood === 'great' && '😊'}
@@ -318,9 +317,9 @@ export default function Dashboard() {
                   {mood === 'overwhelmed' && '😭'}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium capitalize text-[#d0d0e0]">{mood}</p>
+                  <p className="text-sm font-medium capitalize text-dark-100">{mood}</p>
                   {selectedMood === mood && (
-                    <p className="text-xs text-[#5a5a7a]">{moodLabels[mood]}</p>
+                    <p className="text-xs text-dark-400">{moodLabels[mood]}</p>
                   )}
                 </div>
                 {selectedMood === mood && (
@@ -340,27 +339,26 @@ export default function Dashboard() {
           <div className="space-y-3">
             {todayAIPlan.plan.length === 0 ? (
               <div className="py-8 text-center space-y-3">
-                <p className="text-sm text-[#8a8aa3]">No active AI study plans found.</p>
-                <p className="text-xs text-[#5a5a7a]">Head over to the AI Planner tab to generate your first study schedule!</p>
+                <p className="text-sm text-dark-300">No active AI study plans found.</p>
+                <p className="text-xs text-dark-400">Head over to the AI Planner tab to generate your first study schedule!</p>
               </div>
             ) : (
               todayAIPlan.plan.map((item: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-4 p-3 rounded-xl bg-[#12121a] hover:bg-[#1e1e2e] transition-colors">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#5b8def]/20 to-[#4ecdc4]/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-[#5b8def]">{item.time}</span>
+                <div key={idx} className="flex items-center gap-4 p-3 rounded-xl bg-dark-900 border border-dark-600 hover:bg-dark-800 transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-accent-blue/10 border border-accent-blue/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-accent-blue">{item.time}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-white truncate">{item.subject}</p>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${
-                        item.priority === 'high' ? 'bg-[#ff6b6b]/10 text-[#ff6b6b]' :
-                        item.priority === 'medium' ? 'bg-[#f4a261]/10 text-[#f4a261]' :
-                        'bg-[#2ecc71]/10 text-[#2ecc71]'
-                      }`}>{item.priority}</span>
+                      <p className="text-sm font-semibold text-dark-100 truncate">{item.subject}</p>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${item.priority === 'high' ? 'bg-accent-coral/10 text-accent-coral border border-accent-coral/10' :
+                          item.priority === 'medium' ? 'bg-accent-amber/10 text-accent-amber border border-accent-amber/10' :
+                            'bg-accent-green/10 text-accent-green border border-accent-green/10'
+                        }`}>{item.priority}</span>
                     </div>
-                    <p className="text-xs text-[#8a8aa3] truncate">{item.topic}</p>
+                    <p className="text-xs text-dark-300 truncate">{item.topic}</p>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-[#5a5a7a] flex-shrink-0">
+                  <div className="flex items-center gap-1 text-xs text-dark-400 flex-shrink-0">
                     <Clock className="w-3 h-3" />
                     {item.duration}m
                   </div>
@@ -376,20 +374,20 @@ export default function Dashboard() {
           <div className="space-y-3">
             {upcomingClasses.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-xs text-[#5a5a7a]">No classes scheduled for today.</p>
+                <p className="text-xs text-dark-400">No classes scheduled for today.</p>
               </div>
             ) : (
               upcomingClasses.map((cls: any) => (
-                <div key={cls.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#12121a]">
+                <div key={cls.id} className="flex items-center gap-3 p-3 rounded-xl bg-dark-900 border border-dark-600">
                   <div className="w-1 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: cls.color }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{cls.subject}</p>
-                    <div className="flex items-center gap-2 text-xs text-[#5a5a7a]">
+                    <p className="text-sm font-semibold text-dark-100 truncate">{cls.subject}</p>
+                    <div className="flex items-center gap-2 text-xs text-dark-400">
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{cls.time}</span>
                       <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{cls.room}</span>
                     </div>
                   </div>
-                  <span className="text-xs text-[#8a8aa3] flex-shrink-0">{cls.duration}m</span>
+                  <span className="text-xs text-dark-300 flex-shrink-0">{cls.duration}m</span>
                 </div>
               ))
             )}
@@ -404,28 +402,34 @@ export default function Dashboard() {
           {achievements.map((ach) => (
             <div
               key={ach.id}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl text-center transition-all ${
-                ach.unlocked
-                  ? 'bg-gradient-to-br from-[#5b8def]/10 to-[#4ecdc4]/10 border border-[#5b8def]/20'
-                  : 'bg-[#12121a] border border-[#2d2d42] opacity-50'
-              }`}
+              className={`flex flex-col items-center gap-2.5 p-4 rounded-xl text-center transition-all ${ach.unlocked
+                  ? 'bg-accent-blue/5 border border-accent-blue/20'
+                  : 'bg-dark-900 border border-dark-600 opacity-50'
+                }`}
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                ach.unlocked ? 'bg-gradient-to-br from-[#f4a261] to-[#e84393]' : 'bg-[#2d2d42]'
-              }`}>
-                {ach.icon === 'flame' && <Flame className="w-5 h-5 text-white" />}
-                {ach.icon === 'target' && <Zap className="w-5 h-5 text-white" />}
-                {ach.icon === 'sun' && <Sun className="w-5 h-5 text-white" />}
-                {ach.icon === 'check' && <Award className="w-5 h-5 text-white" />}
-                {ach.icon === 'sparkles' && <Zap className="w-5 h-5 text-white" />}
-                {ach.icon === 'crown' && <Award className="w-5 h-5 text-white" />}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${ach.unlocked
+                  ? ach.icon === 'flame' || ach.icon === 'sun' || ach.icon === 'crown'
+                    ? 'bg-accent-amber/10 text-accent-amber border border-accent-amber/20'
+                    : ach.icon === 'check'
+                      ? 'bg-accent-green/10 text-accent-green border border-accent-green/20'
+                      : ach.icon === 'sparkles'
+                        ? 'bg-accent-purple/10 text-accent-purple border border-accent-purple/20'
+                        : 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20'
+                  : 'bg-dark-800 text-dark-400'
+                }`}>
+                {ach.icon === 'flame' && <Flame className="w-5 h-5" />}
+                {ach.icon === 'target' && <Zap className="w-5 h-5" />}
+                {ach.icon === 'sun' && <Sun className="w-5 h-5" />}
+                {ach.icon === 'check' && <Award className="w-5 h-5" />}
+                {ach.icon === 'sparkles' && <Zap className="w-5 h-5" />}
+                {ach.icon === 'crown' && <Award className="w-5 h-5" />}
               </div>
               <div>
-                <p className="text-xs font-semibold text-[#d0d0e0]">{ach.name}</p>
-                <p className="text-[10px] text-[#5a5a7a]">{ach.description}</p>
+                <p className="text-xs font-semibold text-dark-100">{ach.name}</p>
+                <p className="text-[10px] text-dark-400 mt-0.5 leading-tight">{ach.description}</p>
               </div>
               {ach.unlocked && (
-                <span className="text-[10px] font-bold text-[#f4a261]">+{ach.xp} XP</span>
+                <span className="text-[10px] font-bold text-accent-amber">+{ach.xp} XP</span>
               )}
             </div>
           ))}

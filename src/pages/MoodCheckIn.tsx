@@ -338,8 +338,8 @@ export default function MoodCheckIn() {
   if (isLoading) {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3">
-        <div className="w-8 h-8 border-2 border-[#5b8def] border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-[#5a5a7a]">Loading mood check-in...</p>
+        <div className="w-8 h-8 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-dark-400">Loading mood check-in...</p>
       </div>
     );
   }
@@ -359,17 +359,17 @@ export default function MoodCheckIn() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Mood Check-In</h1>
-        <p className="text-sm text-[#8a8aa3] mt-1">How you feel changes how you should study</p>
+        <h1 className="text-2xl font-bold text-dark-100">Mood Check-In</h1>
+        <p className="text-sm text-dark-300 mt-1">How you feel changes how you should study</p>
       </div>
 
       {/* Mood Selector & Sliders */}
       <Card>
         <div className="flex items-center gap-2 mb-5">
-          <div className="w-8 h-8 rounded-lg bg-[#5b8def]/10 flex items-center justify-center">
-            <Smile className="w-4 h-4 text-[#5b8def]" />
+          <div className="w-8 h-8 rounded-lg bg-accent-blue/10 flex items-center justify-center">
+            <Smile className="w-4 h-4 text-accent-blue" />
           </div>
-          <h3 className="text-sm font-semibold text-[#d0d0e0]">How are you feeling today?</h3>
+          <h3 className="text-sm font-semibold text-dark-100">How are you feeling today?</h3>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {moodOptions.map((m) => (
@@ -378,13 +378,13 @@ export default function MoodCheckIn() {
               onClick={() => setSelectedMood(m.value, localStress, localFocus)}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 ${
                 selectedMood === m.value
-                  ? 'bg-[#1e1e2e] border-2 scale-105'
-                  : 'bg-[#12121a] border border-[#2d2d42] hover:border-[#3a3a55]'
+                  ? 'bg-dark-800 border-2 scale-105'
+                  : 'bg-dark-950 border border-dark-600 hover:border-dark-400'
               }`}
               style={selectedMood === m.value ? { borderColor: m.color } : {}}
             >
               <span className="text-3xl">{m.emoji}</span>
-              <span className="text-sm font-medium text-[#d0d0e0]">{m.label}</span>
+              <span className="text-sm font-medium text-dark-100">{m.label}</span>
               {selectedMood === m.value && (
                 <motion.div
                   initial={{ scale: 0 }}
@@ -398,11 +398,11 @@ export default function MoodCheckIn() {
         </div>
 
         {/* Stress & Focus Sliders */}
-        <div className="mt-6 pt-6 border-t border-[#2d2d42] grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="mt-6 pt-6 border-t border-dark-600 grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-medium text-[#d0d0e0]">Stress Level</label>
-              <span className="text-xs font-bold text-[#ff6b6b]">{localStress.toFixed(1)} / 10</span>
+              <label className="text-sm font-medium text-dark-100">Stress Level</label>
+              <span className="text-xs font-bold text-accent-coral">{localStress.toFixed(1)} / 10</span>
             </div>
             <input
               type="range"
@@ -411,17 +411,17 @@ export default function MoodCheckIn() {
               step="0.5"
               value={localStress}
               onChange={e => setLocalStress(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-[#12121a] rounded-lg appearance-none cursor-pointer accent-[#ff6b6b]"
+              className="w-full h-1.5 bg-dark-950 rounded-lg appearance-none cursor-pointer accent-accent-coral"
             />
-            <div className="flex justify-between text-[10px] text-[#5a5a7a] mt-1">
+            <div className="flex justify-between text-[10px] text-dark-400 mt-1">
               <span>Calm</span>
               <span>Stressed</span>
             </div>
           </div>
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-medium text-[#d0d0e0]">Focus Level</label>
-              <span className="text-xs font-bold text-[#4ecdc4]">{localFocus.toFixed(1)} / 10</span>
+              <label className="text-sm font-medium text-dark-100">Focus Level</label>
+              <span className="text-xs font-bold text-accent-teal">{localFocus.toFixed(1)} / 10</span>
             </div>
             <input
               type="range"
@@ -430,23 +430,23 @@ export default function MoodCheckIn() {
               step="0.5"
               value={localFocus}
               onChange={e => setLocalFocus(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-[#12121a] rounded-lg appearance-none cursor-pointer accent-[#4ecdc4]"
+              className="w-full h-1.5 bg-dark-950 rounded-lg appearance-none cursor-pointer accent-accent-teal"
             />
-            <div className="flex justify-between text-[10px] text-[#5a5a7a] mt-1">
+            <div className="flex justify-between text-[10px] text-dark-400 mt-1">
               <span>Distracted</span>
               <span>Focused</span>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-[#2d2d42] flex items-center justify-between">
-          <p className="text-sm text-[#8a8aa3]">
+        <div className="mt-6 pt-4 border-t border-dark-600 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <p className="text-sm text-dark-300">
             {mood?.desc || 'Select a mood below to begin your check-in.'}
           </p>
           <button
             onClick={handleSubmit}
             disabled={!selectedMood}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#5b8def] to-[#4ecdc4] text-white font-medium text-sm hover:shadow-lg transition-all disabled:opacity-50 disabled:pointer-events-none"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-accent-blue text-white font-medium text-sm transition-all hover:bg-accent-blue/90 disabled:opacity-50 disabled:pointer-events-none"
           >
             {submitted ? (
               <>
@@ -473,12 +473,12 @@ export default function MoodCheckIn() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="flex flex-col items-center justify-center text-center py-12 px-6 border-dashed border-2 border-[#2d2d42]">
-              <div className="w-16 h-16 rounded-full bg-[#5b8def]/10 flex items-center justify-center mb-4">
-                <Brain className="w-8 h-8 text-[#5b8def]" />
+            <Card className="flex flex-col items-center justify-center text-center py-12 px-6 border-dashed border-2 border-dark-600 bg-dark-900/20">
+              <div className="w-16 h-16 rounded-full bg-accent-blue/10 flex items-center justify-center mb-4">
+                <Brain className="w-8 h-8 text-accent-blue" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">No Mood Check-in Yet</h3>
-              <p className="text-sm text-[#8a8aa3] max-w-md">
+              <h3 className="text-lg font-semibold text-dark-100 mb-2">No Mood Check-in Yet</h3>
+              <p className="text-sm text-dark-300 max-w-md">
                 Please select how you're feeling today, adjust your stress and focus levels above, and save your check-in to record your mood.
               </p>
             </Card>
@@ -494,13 +494,13 @@ export default function MoodCheckIn() {
           >
             {/* Adjusted Plan Header */}
             <Card className="border-l-4" style={{ borderLeftColor: mood?.color }}>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: (mood?.color || '#5b8def') + '20' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 animate-pulse-slow" style={{ backgroundColor: (mood?.color || 'var(--accent-blue)') + '20' }}>
                   <Brain className="w-5 h-5" style={{ color: mood?.color }} />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-white">{adjustment.title}</h3>
-                  <p className="text-xs text-[#8a8aa3]">{adjustment.desc}</p>
+                  <h3 className="text-base font-semibold text-dark-100">{adjustment.title}</h3>
+                  <p className="text-xs text-dark-300">{adjustment.desc}</p>
                 </div>
               </div>
             </Card>
@@ -508,46 +508,46 @@ export default function MoodCheckIn() {
             {/* Adjusted Schedule */}
             <Card>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-[#4ecdc4]/10 flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-[#4ecdc4]" />
+                <div className="w-8 h-8 rounded-lg bg-accent-teal/10 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-accent-teal" />
                 </div>
-                <h3 className="text-sm font-semibold text-[#d0d0e0]">AI-Adjusted Study Plan</h3>
+                <h3 className="text-sm font-semibold text-dark-100">AI-Adjusted Study Plan</h3>
               </div>
               <div className="space-y-3">
                 {adjustment.plan.map((item, idx) => (
                   <div
                     key={idx}
-                    className={`flex items-center gap-4 p-3 rounded-xl ${
+                    className={`flex items-center gap-4 p-3 rounded-xl border ${
                       item.intensity === 'Rest'
-                        ? 'bg-[#9b59b6]/5 border border-[#9b59b6]/20'
-                        : 'bg-[#12121a]'
+                        ? 'bg-accent-purple/5 border-accent-purple/20'
+                        : 'bg-dark-950 border-dark-600/30'
                     }`}
                   >
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
-                        backgroundColor: item.intensity === 'High' ? '#ff6b6b20' :
-                          item.intensity === 'Medium' ? '#f4a26120' :
-                          item.intensity === 'Low' ? '#5b8def20' : '#9b59b620'
+                        backgroundColor: item.intensity === 'High' ? 'var(--accent-coral)20' :
+                          item.intensity === 'Medium' ? 'var(--accent-amber)20' :
+                          item.intensity === 'Low' ? 'var(--accent-blue)20' : 'var(--accent-purple)20'
                       }}
                     >
-                      {item.intensity === 'Rest' ? <Coffee className="w-5 h-5 text-[#9b59b6]" /> :
-                       item.intensity === 'High' ? <Sun className="w-5 h-5 text-[#ff6b6b]" /> :
-                       item.intensity === 'Medium' ? <Wind className="w-5 h-5 text-[#f4a261]" /> :
-                       <Heart className="w-5 h-5 text-[#5b8def]" />}
+                      {item.intensity === 'Rest' ? <Coffee className="w-5 h-5 text-accent-purple" /> :
+                       item.intensity === 'High' ? <Sun className="w-5 h-5 text-accent-coral" /> :
+                       item.intensity === 'Medium' ? <Wind className="w-5 h-5 text-accent-amber" /> :
+                       <Heart className="w-5 h-5 text-accent-blue" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-white">{item.subject}</p>
+                        <p className="text-sm font-semibold text-dark-100">{item.subject}</p>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${
-                          item.intensity === 'High' ? 'bg-[#ff6b6b]/10 text-[#ff6b6b]' :
-                          item.intensity === 'Medium' ? 'bg-[#f4a261]/10 text-[#f4a261]' :
-                          item.intensity === 'Low' ? 'bg-[#5b8def]/10 text-[#5b8def]' :
-                          'bg-[#9b59b6]/10 text-[#9b59b6]'
+                          item.intensity === 'High' ? 'bg-accent-coral/10 text-accent-coral' :
+                          item.intensity === 'Medium' ? 'bg-accent-amber/10 text-accent-amber' :
+                          item.intensity === 'Low' ? 'bg-accent-blue/10 text-accent-blue' :
+                          'bg-accent-purple/10 text-accent-purple'
                         }`}>{item.intensity}</span>
                       </div>
-                      <p className="text-xs text-[#8a8aa3] truncate">{item.topic}</p>
+                      <p className="text-xs text-dark-300 truncate">{item.topic}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-[#5a5a7a] flex-shrink-0">
+                    <div className="flex items-center gap-1 text-xs text-dark-400 flex-shrink-0">
                       <Clock className="w-3 h-3" />
                       {item.duration}m
                     </div>
@@ -559,18 +559,18 @@ export default function MoodCheckIn() {
             {/* Tips */}
             <Card>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-[#2ecc71]/10 flex items-center justify-center">
-                  <Heart className="w-4 h-4 text-[#2ecc71]" />
+                <div className="w-8 h-8 rounded-lg bg-accent-green/10 flex items-center justify-center">
+                  <Heart className="w-4 h-4 text-accent-green" />
                 </div>
-                <h3 className="text-sm font-semibold text-[#d0d0e0]">Personalized Tips</h3>
+                <h3 className="text-sm font-semibold text-dark-100">Personalized Tips</h3>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {adjustment.tips.map((tip, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-[#12121a]">
-                    <div className="w-6 h-6 rounded-full bg-[#5b8def]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-[#5b8def]" />
+                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-dark-950 border border-dark-600/30">
+                    <div className="w-6 h-6 rounded-full bg-accent-blue/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-accent-blue/20">
+                      <Check className="w-3 h-3 text-accent-blue" />
                     </div>
-                    <p className="text-sm text-[#d0d0e0]">{tip}</p>
+                    <p className="text-sm text-dark-200">{tip}</p>
                   </div>
                 ))}
               </div>

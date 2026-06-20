@@ -19,14 +19,14 @@ export default function Sidebar() {
   const { signOut } = useAuth();
 
   return (
-    <aside className="w-64 h-screen fixed left-0 top-0 glass-card-strong border-r border-[#2d2d42] flex flex-col z-50">
+    <aside className="w-64 h-screen fixed left-0 top-0 bg-dark-900 border-r border-dark-600 flex flex-col z-50">
       <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#5b8def] to-[#4ecdc4] flex items-center justify-center shadow-lg">
-          <Brain className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center">
+          <Brain className="w-5 h-5 text-accent-blue" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-white tracking-tight">StudyAI</h1>
-          <p className="text-[10px] text-[#5a5a7a] font-medium tracking-wider uppercase">Engineering Planner</p>
+          <h1 className="text-lg font-bold text-dark-100 tracking-tight">StudyAI</h1>
+          <p className="text-[10px] text-dark-400 font-semibold tracking-wider uppercase">Engineering Planner</p>
         </div>
       </div>
 
@@ -36,10 +36,10 @@ export default function Sidebar() {
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+              `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-gradient-to-r from-[#5b8def]/15 to-[#4ecdc4]/10 text-[#5b8def] border border-[#5b8def]/20'
-                  : 'text-[#8a8aa3] hover:text-[#d0d0e0] hover:bg-[#1e1e2e]/60'
+                  ? 'bg-accent-blue/10 text-accent-blue font-semibold'
+                  : 'text-dark-300 hover:text-dark-100 hover:bg-dark-800 border border-transparent'
               }`
             }
           >
@@ -49,10 +49,10 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-[#2d2d42]">
+      <div className="p-4 border-t border-dark-600">
         <button
           onClick={signOut}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[#8a8aa3] hover:text-[#ff6b6b] hover:bg-[#ff6b6b]/10 transition-all duration-200"
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-dark-300 hover:text-accent-coral hover:bg-accent-coral/10 border border-transparent transition-all duration-200"
         >
           <LogOut className="w-[18px] h-[18px]" strokeWidth={2} />
           Sign Out

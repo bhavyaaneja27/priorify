@@ -24,32 +24,33 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4 relative overflow-hidden">
-      <div className="absolute top-20 left-10 w-72 h-72 bg-[#5b8def]/10 rounded-full blur-[100px]" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#4ecdc4]/10 rounded-full blur-[120px]" />
+    <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-accent-blue/5 rounded-full blur-[80px]" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent-teal/5 rounded-full blur-[90px]" />
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#5b8def] to-[#4ecdc4] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#5b8def]/20">
-            <Brain className="w-7 h-7 text-white" />
+          <div className="w-12 h-12 rounded-xl bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center mx-auto mb-4">
+            <Brain className="w-6 h-6 text-accent-blue" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-1">Reset password</h1>
-          <p className="text-sm text-[#8a8aa3]">We'll send you a link to reset your password</p>
+          <h1 className="text-2xl font-bold text-dark-100 mb-1 tracking-tight">Reset password</h1>
+          <p className="text-sm text-dark-300">We'll send you a link to reset your password</p>
         </div>
 
-        <div className="glass-card rounded-3xl p-8">
+        <div className="glass-card p-8">
           {sent ? (
             <div className="text-center py-4">
-              <div className="w-16 h-16 rounded-full bg-[#2ecc71]/10 flex items-center justify-center mx-auto mb-4">
-                <Check className="w-8 h-8 text-[#2ecc71]" />
+              <div className="w-16 h-16 rounded-full bg-accent-green/10 border border-accent-green/20 flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-accent-green" />
               </div>
-              <h2 className="text-lg font-semibold text-white mb-2">Email sent!</h2>
-              <p className="text-sm text-[#8a8aa3] mb-6">
+              <h2 className="text-lg font-semibold text-dark-100 mb-2">Email sent!</h2>
+              <p className="text-sm text-dark-300 mb-6">
                 Check your inbox for a password reset link. If you don't see it, check your spam folder.
               </p>
               <Link
                 to="/login"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#5b8def] to-[#4ecdc4] text-white font-medium text-sm hover:shadow-lg transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent-blue text-white font-medium text-sm hover:bg-accent-blue/95 transition-all shadow-sm"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Sign In
@@ -59,22 +60,22 @@ export default function ForgotPassword() {
             <>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#d0d0e0] mb-2">Email</label>
+                  <label className="block text-xs font-semibold text-dark-200 mb-2">Email</label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a5a7a]" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@university.edu"
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-[#12121a] border border-[#2d2d42] text-white text-sm focus:border-[#5b8def] focus:ring-1 focus:ring-[#5b8def]/30 outline-none transition-all"
+                      className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none transition-all"
                       required
                     />
                   </div>
                 </div>
 
                 {error && (
-                  <div className="px-4 py-3 rounded-xl bg-[#ff6b6b]/10 border border-[#ff6b6b]/20 text-sm text-[#ff6b6b]">
+                  <div className="px-4 py-2.5 rounded-xl bg-accent-coral/10 border border-accent-coral/20 text-xs text-accent-coral">
                     {error}
                   </div>
                 )}
@@ -82,7 +83,7 @@ export default function ForgotPassword() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-[#5b8def] to-[#4ecdc4] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#5b8def]/25 transition-all duration-300 disabled:opacity-60"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent-blue text-white font-semibold text-sm hover:bg-accent-blue/90 transition-all duration-200 disabled:opacity-60 shadow-sm"
                 >
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -95,8 +96,8 @@ export default function ForgotPassword() {
                 </button>
               </form>
 
-              <p className="text-center text-sm text-[#8a8aa3] mt-6">
-                <Link to="/login" className="inline-flex items-center gap-1 text-[#5b8def] hover:text-[#4ecdc4] transition-colors font-medium">
+              <p className="text-center text-xs text-dark-300 mt-6">
+                <Link to="/login" className="inline-flex items-center gap-1.5 text-accent-blue hover:underline transition-colors font-medium">
                   <ArrowLeft className="w-4 h-4" />
                   Back to Sign In
                 </Link>
