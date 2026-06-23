@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, CalendarDays, ListTodo, Sparkles, Smile,
-  Timer, Settings, LogOut, BarChart3, Zap
+  Timer, Settings, LogOut, BarChart3, Zap, Brain
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,6 +9,7 @@ const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/tasks', label: 'Tasks', icon: ListTodo },
   { path: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { path: '/ai-engine', label: 'AI Engine', icon: Brain },
   { path: '/action-planner', label: 'Action Planner', icon: Sparkles },
   { path: '/productivity-check', label: 'Productivity Check', icon: Smile },
   { path: '/focus', label: 'Focus Sessions', icon: Timer },

@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Flame, Zap, Clock, TrendingUp, Award,
-  Calendar, MapPin, ListTodo, Sparkles, Target
+  Calendar, MapPin, ListTodo, Sparkles, Target,
+  AlertTriangle, CheckCircle2, ArrowUpRight, Brain
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar
@@ -13,9 +14,18 @@ import {
   useUserProfile,
   useTimetable,
   usePomodoroHistory,
-  useAIPlans
+  useAIPlans,
+  useTasks,
+  useCalendarEvents,
+  useDailyPlans,
+  Task
 } from '../hooks/usePersistence';
 import { energyOptions } from '../data/dummyData';
+
+function isOverdue(task: Task): boolean {
+  if (task.status === 'completed') return false;
+  return new Date(task.dueDate) < new Date(new Date().toDateString());
+}
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
@@ -51,8 +61,11 @@ export default function Dashboard() {
   const { selectedMood, saveMood, loading: loadingMood } = useMood();
   const { history: pomoHistory, loading: loadingPomo } = usePomodoroHistory();
   const { plans, loading: loadingPlans } = useAIPlans();
+  const { tasks, loading: loadingTasks } = useTasks();
+  const { getEventsForDate, loading: loadingCal } = useCalendarEvents();
+  const { getPlanForDate, loading: loadingDailyPlans } = useDailyPlans();
 
-  if (loadingProfile || loadingTimetable || loadingMoodHistory || loadingMood || loadingPomo || loadingPlans || !profile) {
+  if (loadingProfile || loadingTimetable || loadingMoodHistory || loadingMood || loadingPomo || loadingPlans || loadingTasks || loadingCal || loadingDailyPlans || !profile) {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3">
         <div className="w-8 h-8 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
@@ -86,21 +99,6 @@ export default function Dashboard() {
     };
   });
 
-  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const todayName = weekdays[new Date().getDay()];
-  const todayCalendar = schedule.find((d: { day: string }) => d.day === todayName);
-  const upcomingEvents = todayCalendar ? todayCalendar.slots.map((s: { subject: string; time: string; room: string; duration?: number; color: string }, idx: number) => ({
-    id: idx.toString(),
-    title: s.subject,
-    time: s.time,
-    location: s.room,
-    duration: s.duration || 90,
-    color: s.color
-  })) : [];
-
-  const latestPlan = plans && plans.length > 0 ? plans[plans.length - 1] : null;
-  const currentDayItem = latestPlan ? latestPlan.schedule.find((d: { completed: boolean }) => !d.completed) || latestPlan.schedule[0] : null;
-
   const getGreeting = (name: string) => {
     const hour = new Date().getHours();
     let greetingPrefix = 'Good night';
@@ -110,16 +108,25 @@ export default function Dashboard() {
     return `${greetingPrefix}, ${name}!`;
   };
 
-  const todayActionPlan = currentDayItem ? currentDayItem.topics.map((topic: string, idx: number) => {
-    const hoursPerTopic = currentDayItem.hours / currentDayItem.topics.length;
-    return {
-      time: idx === 0 ? '09:00' : idx === 1 ? '11:30' : '14:00',
-      task: latestPlan.subject,
-      step: topic,
-      priority: latestPlan.difficulty.toLowerCase() === 'hard' ? 'high' : latestPlan.difficulty.toLowerCase() === 'medium' ? 'medium' : 'low',
-      duration: Math.round(hoursPerTopic * 60)
-    };
-  }) : [];
+  const todayStr = new Date().toISOString().split('T')[0];
+  const upcomingEvents = getEventsForDate(todayStr).filter(e => !e.allDay);
+
+  const todayPlan = getPlanForDate(todayStr);
+
+  // Task-derived stats
+  const totalTasks     = tasks.length;
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  const overdueTasks   = tasks.filter(isOverdue);
+  const highPriorityPending = tasks
+    .filter(t => (t.priority === 'high' || t.priority === 'critical') && t.status !== 'completed')
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .slice(0, 3);
+  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  const upcomingTasks = tasks
+    .filter(t => t.status !== 'completed' && !isOverdue(t))
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .slice(0, 4);
 
   const productivityScore = Math.min(100, Math.round(
     (profile.streak || 0) * 5 + Math.min(40, (profile.totalHours || 0) / 10) + (plans.length > 0 ? 15 : 0) + 20
@@ -173,14 +180,21 @@ export default function Dashboard() {
                 <span className="text-2xl font-bold text-dark-100">{productivityScore}%</span>
               </div>
             </div>
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+              <Link to="/ai-engine" className="p-4 rounded-xl bg-dark-900 border border-dark-600 hover:border-accent-purple/30 transition-all">
+                <Brain className="w-5 h-5 text-accent-purple mb-2" />
+                <p className="text-sm font-semibold text-dark-100">AI Engine</p>
+                <p className="text-xs text-dark-400">Smart Priority</p>
+              </Link>
               <Link to="/tasks" className="p-4 rounded-xl bg-dark-900 border border-dark-600 hover:border-accent-blue/30 transition-all">
                 <ListTodo className="w-5 h-5 text-accent-blue mb-2" />
                 <p className="text-sm font-semibold text-dark-100">Tasks</p>
-                <p className="text-xs text-dark-400">Coming in Phase 1</p>
+                <p className="text-xs text-dark-400">
+                  {completedTasks}/{totalTasks} completed
+                </p>
               </Link>
-              <Link to="/action-planner" className="p-4 rounded-xl bg-dark-900 border border-dark-600 hover:border-accent-purple/30 transition-all">
-                <Sparkles className="w-5 h-5 text-accent-purple mb-2" />
+              <Link to="/action-planner" className="p-4 rounded-xl bg-dark-900 border border-dark-600 hover:border-accent-amber/30 transition-all">
+                <Sparkles className="w-5 h-5 text-accent-amber mb-2" />
                 <p className="text-sm font-semibold text-dark-100">Action Planner</p>
                 <p className="text-xs text-dark-400">{plans.length} active plans</p>
               </Link>
@@ -291,36 +305,121 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* ── Task Management Widgets ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Completion progress */}
+        <Card>
+          <SectionTitle icon={CheckCircle2} title="Task Completion" subtitle={`${completedTasks} of ${totalTasks} tasks done`} />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-bold text-dark-100">{completionRate}%</span>
+              <Link to="/tasks" className="text-xs text-accent-blue hover:underline flex items-center gap-1">
+                View all <ArrowUpRight className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="w-full h-2.5 rounded-full bg-dark-800 overflow-hidden">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-accent-blue to-accent-teal"
+                initial={{ width: 0 }}
+                animate={{ width: `${completionRate}%` }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="p-2.5 rounded-xl bg-dark-900 border border-dark-600 text-center">
+                <p className="text-base font-bold text-dark-100">{completedTasks}</p>
+                <p className="text-[10px] text-accent-green mt-0.5">Completed</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-dark-900 border border-dark-600 text-center">
+                <p className="text-base font-bold text-dark-100">{tasks.filter(t => t.status === 'in-progress').length}</p>
+                <p className="text-[10px] text-accent-amber mt-0.5">In progress</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-dark-900 border border-dark-600 text-center">
+                <p className="text-base font-bold text-accent-coral">{overdueTasks.length}</p>
+                <p className="text-[10px] text-accent-coral mt-0.5">Overdue</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Upcoming tasks */}
+        <Card>
+          <SectionTitle icon={ListTodo} title="Upcoming Tasks" subtitle="Next due dates" />
+          <div className="space-y-2">
+            {upcomingTasks.length === 0 ? (
+              <div className="py-6 text-center">
+                <p className="text-xs text-dark-400">No upcoming tasks.</p>
+                <Link to="/tasks" className="text-xs text-accent-blue hover:underline mt-1 inline-block">Add tasks →</Link>
+              </div>
+            ) : upcomingTasks.map(t => (
+              <Link key={t.id} to="/tasks" className="flex items-center gap-3 p-2.5 rounded-xl bg-dark-900 border border-dark-600 hover:border-accent-blue/30 transition-all">
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{
+                  backgroundColor: t.priority === 'critical' ? 'var(--accent-pink)' : t.priority === 'high' ? 'var(--accent-coral)' : t.priority === 'medium' ? 'var(--accent-amber)' : 'var(--accent-teal)'
+                }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-dark-100 truncate">{t.title}</p>
+                  <p className="text-[10px] text-dark-400">{new Date(t.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+
+        {/* High-priority pending */}
+        <Card>
+          <SectionTitle icon={AlertTriangle} title="High Priority" subtitle="Needs attention" />
+          <div className="space-y-2">
+            {highPriorityPending.length === 0 ? (
+              <div className="py-6 text-center">
+                <p className="text-xs text-dark-400">No high-priority tasks pending. 🎉</p>
+              </div>
+            ) : highPriorityPending.map(t => (
+              <Link key={t.id} to="/tasks" className="flex items-center gap-3 p-2.5 rounded-xl bg-dark-900 border border-dark-600 hover:border-accent-coral/30 transition-all">
+                <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ${
+                  t.priority === 'critical' ? 'bg-accent-pink/10 text-accent-pink' : 'bg-accent-coral/10 text-accent-coral'
+                }`}>{t.priority.toUpperCase()}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-dark-100 truncate">{t.title}</p>
+                  <p className="text-[10px] text-dark-400">{t.category}</p>
+                </div>
+              </Link>
+            ))}
+            {highPriorityPending.length > 0 && (
+              <Link to="/tasks" className="block mt-1 text-xs text-accent-blue hover:underline text-center">
+                View all tasks →
+              </Link>
+            )}
+          </div>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
-          <SectionTitle icon={Zap} title="Today's Action Plan" subtitle={todayActionPlan.length > 0 ? `${currentDayItem?.hours || 0} hours planned` : 'Get started with AI'} />
+          <SectionTitle icon={Zap} title="Today's Plan" subtitle={todayPlan ? `${Math.round(todayPlan.workloadMinutes / 60)}h ${todayPlan.workloadMinutes % 60}m workload` : 'Get started with AI'} />
           <div className="space-y-3">
-            {todayActionPlan.length === 0 ? (
+            {!todayPlan ? (
               <div className="py-8 text-center space-y-3">
-                <p className="text-sm text-dark-300">No active action plans found.</p>
-                <Link to="/action-planner" className="text-xs text-accent-blue hover:underline">
-                  Head to AI Action Planner to generate your first plan →
+                <p className="text-sm text-dark-300">No daily plan generated for today.</p>
+                <Link to="/ai-engine" className="text-xs text-accent-blue hover:underline inline-flex items-center gap-1">
+                  <Brain className="w-4 h-4" /> Go to AI Engine to plan your day →
                 </Link>
               </div>
             ) : (
-              todayActionPlan.map((item: { time: string; task: string; step: string; priority: string; duration: number }, idx: number) => (
+              todayPlan.schedule.map((item, idx: number) => (
                 <div key={idx} className="flex items-center gap-4 p-3 rounded-xl bg-dark-900 border border-dark-600 hover:bg-dark-800 transition-colors">
-                  <div className="w-12 h-12 rounded-xl bg-accent-blue/10 border border-accent-blue/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-accent-blue">{item.time}</span>
+                  <div className="w-16 h-12 rounded-xl bg-accent-blue/10 border border-accent-blue/10 flex flex-col items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-accent-blue leading-tight">{item.time}</span>
+                    <span className="text-[10px] text-dark-400 leading-tight">{item.endTime}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-dark-100 truncate">{item.task}</p>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${item.priority === 'high' ? 'bg-accent-coral/10 text-accent-coral border border-accent-coral/10' :
-                        item.priority === 'medium' ? 'bg-accent-amber/10 text-accent-amber border border-accent-amber/10' :
+                      <p className="text-sm font-semibold text-dark-100 truncate">{item.title}</p>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${item.type === 'event' ? 'bg-accent-blue/10 text-accent-blue border border-accent-blue/10' :
+                        item.type === 'break' ? 'bg-dark-700 text-dark-300 border border-dark-600' :
                           'bg-accent-green/10 text-accent-green border border-accent-green/10'
-                        }`}>{item.priority}</span>
+                        }`}>{item.type}</span>
                     </div>
-                    <p className="text-xs text-dark-300 truncate">{item.step}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-dark-400 flex-shrink-0">
-                    <Clock className="w-3 h-3" />
-                    {item.duration}m
+                    {item.notes && <p className="text-xs text-dark-300 truncate">{item.notes}</p>}
                   </div>
                 </div>
               ))
@@ -329,27 +428,31 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <SectionTitle icon={Calendar} title="Upcoming Events" subtitle="Today" />
-          <div className="space-y-3">
+          <SectionTitle icon={Calendar} title="Today's Events" subtitle={new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} />
+          <div className="space-y-2">
             {upcomingEvents.length === 0 ? (
               <div className="py-8 text-center">
                 <p className="text-xs text-dark-400">No events scheduled for today.</p>
                 <Link to="/calendar" className="text-xs text-accent-blue hover:underline mt-2 inline-block">Add to calendar →</Link>
               </div>
             ) : (
-              upcomingEvents.map((evt: { id: string; title: string; time: string; location: string; duration: number; color: string }) => (
-                <div key={evt.id} className="flex items-center gap-3 p-3 rounded-xl bg-dark-900 border border-dark-600">
+              upcomingEvents.slice(0, 4).map(evt => (
+                <Link key={evt.id} to="/calendar"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-dark-900 border border-dark-600 hover:border-accent-blue/30 transition-all">
                   <div className="w-1 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: evt.color }} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-dark-100 truncate">{evt.title}</p>
                     <div className="flex items-center gap-2 text-xs text-dark-400">
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{evt.time}</span>
-                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{evt.location}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{evt.startTime}</span>
+                      {evt.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{evt.location}</span>}
                     </div>
                   </div>
-                  <span className="text-xs text-dark-300 flex-shrink-0">{evt.duration}m</span>
-                </div>
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: evt.color }} />
+                </Link>
               ))
+            )}
+            {upcomingEvents.length > 4 && (
+              <Link to="/calendar" className="block text-center text-xs text-accent-blue hover:underline mt-1">+{upcomingEvents.length - 4} more →</Link>
             )}
           </div>
         </Card>

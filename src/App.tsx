@@ -11,6 +11,7 @@ import ProductivityCheck from './pages/ProductivityCheck';
 import FocusSessions from './pages/FocusSessions';
 import Tasks from './pages/Tasks';
 import Insights from './pages/Insights';
+import AIPriorityEngine from './pages/AIPriorityEngine';
 import Settings from './pages/Settings';
 import Welcome from './pages/Welcome';
 import Layout from './components/Layout';
@@ -79,6 +80,7 @@ function App() {
       <Route path="/productivity-check" element={<ProtectedRoute><ProductivityCheck /></ProtectedRoute>} />
       <Route path="/focus" element={<ProtectedRoute><FocusSessions /></ProtectedRoute>} />
       <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
+      <Route path="/ai-engine" element={<ProtectedRoute><AIPriorityEngine /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
       {/* Legacy StudyAI routes → Priorify */}

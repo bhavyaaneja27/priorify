@@ -599,3 +599,388 @@ export function useUserProfile() {
 
   return { profile, saveProfile, loading };
 }
+
+// ─────────────────────────────────────────────
+// 8. Tasks Hook  (Phase 1 – Priorify specific)
+// ─────────────────────────────────────────────
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+export type TaskStatus   = 'pending' | 'in-progress' | 'completed';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: TaskPriority;
+  dueDate: string;          // ISO date string, e.g. "2025-07-01"
+  status: TaskStatus;
+  createdAt: string;        // ISO datetime
+  updatedAt: string;        // ISO datetime
+}
+
+const TASKS_KEY = 'priorify_tasks';
+
+export function useTasks() {
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const isDemo = !user || user.isDemo;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError(null);
+      if (isDemo) {
+        const saved = localStorage.getItem(TASKS_KEY);
+        if (saved) {
+          try {
+            setTasks(JSON.parse(saved));
+          } catch {
+            setTasks([]);
+          }
+        } else {
+          // Seed with a handful of sample tasks so the UI isn't empty on first visit
+          const now = new Date().toISOString();
+          const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+          const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+          const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+          const seed: Task[] = [
+            {
+              id: generateUUID(),
+              title: 'Review Q3 project proposal',
+              description: 'Go through the deck and leave comments for the team before the Thursday meeting.',
+              category: 'Work',
+              priority: 'high',
+              dueDate: tomorrow,
+              status: 'in-progress',
+              createdAt: now,
+              updatedAt: now,
+            },
+            {
+              id: generateUUID(),
+              title: 'Set up weekly goal tracker',
+              description: 'Create a simple spreadsheet to log daily outputs.',
+              category: 'Personal',
+              priority: 'medium',
+              dueDate: nextWeek,
+              status: 'pending',
+              createdAt: now,
+              updatedAt: now,
+            },
+            {
+              id: generateUUID(),
+              title: 'Submit expense report',
+              description: 'Upload April receipts to the HR portal.',
+              category: 'Admin',
+              priority: 'critical',
+              dueDate: yesterday,
+              status: 'pending',
+              createdAt: now,
+              updatedAt: now,
+            },
+            {
+              id: generateUUID(),
+              title: 'Read "Deep Work" – Chapter 3',
+              description: '',
+              category: 'Learning',
+              priority: 'low',
+              dueDate: nextWeek,
+              status: 'completed',
+              createdAt: now,
+              updatedAt: now,
+            },
+          ];
+          setTasks(seed);
+          localStorage.setItem(TASKS_KEY, JSON.stringify(seed));
+        }
+      } else {
+        // Future: fetch from supabase 'priorify_tasks' table
+        // For now fall back to localStorage even for authenticated users
+        // (Supabase table will be added in a future schema migration)
+        const saved = localStorage.getItem(`${TASKS_KEY}_${user.id}`);
+        if (saved) {
+          try {
+            setTasks(JSON.parse(saved));
+          } catch {
+            setTasks([]);
+          }
+        } else {
+          setTasks([]);
+        }
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, isDemo]);
+
+  const persist = (updated: Task[]) => {
+    if (isDemo) {
+      localStorage.setItem(TASKS_KEY, JSON.stringify(updated));
+    } else {
+      localStorage.setItem(`${TASKS_KEY}_${user!.id}`, JSON.stringify(updated));
+    }
+  };
+
+  const createTask = (data: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Task => {
+    const now = new Date().toISOString();
+    const task: Task = { ...data, id: generateUUID(), createdAt: now, updatedAt: now };
+    const updated = [task, ...tasks];
+    setTasks(updated);
+    persist(updated);
+    return task;
+  };
+
+  const updateTask = (id: string, patch: Partial<Omit<Task, 'id' | 'createdAt'>>): void => {
+    const updated = tasks.map(t =>
+      t.id === id ? { ...t, ...patch, updatedAt: new Date().toISOString() } : t
+    );
+    setTasks(updated);
+    persist(updated);
+  };
+
+  const deleteTask = (id: string): void => {
+    const updated = tasks.filter(t => t.id !== id);
+    setTasks(updated);
+    persist(updated);
+  };
+
+  return { tasks, loading, error, createTask, updateTask, deleteTask };
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 9. Calendar Events Hook  (Phase 2 — Priorify general-purpose calendar)
+// ─────────────────────────────────────────────────────────────────
+export type EventCategory = 'personal' | 'work' | 'study' | 'health' | 'other';
+
+export const CATEGORY_COLORS: Record<EventCategory, string> = {
+  personal: '#A78BFA', // accent-purple
+  work:     '#60A5FA', // accent-blue
+  study:    '#34D399', // accent-teal
+  health:   '#FB7185', // accent-pink/rose
+  other:    '#FCD34D', // accent-amber
+};
+
+export const CATEGORY_LABELS: Record<EventCategory, string> = {
+  personal: 'Personal',
+  work:     'Work',
+  study:    'Study',
+  health:   'Health',
+  other:    'Other',
+};
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  category: EventCategory;
+  color: string;           // hex — defaults to CATEGORY_COLORS[category]
+  startDate: string;       // 'YYYY-MM-DD'
+  startTime: string;       // 'HH:MM' (24-h), empty when allDay
+  endDate: string;         // 'YYYY-MM-DD'
+  endTime: string;         // 'HH:MM' (24-h), empty when allDay
+  location: string;
+  allDay: boolean;
+  // Google Calendar integration placeholders (Phase 3)
+  googleEventId?: string;
+  source?: 'local' | 'google';
+  createdAt: string;
+  updatedAt: string;
+}
+
+const CAL_KEY = 'priorify_calendar_events';
+
+function buildSeedEvents(): CalendarEvent[] {
+  const now = new Date().toISOString();
+  const today = new Date();
+  const fmt = (d: Date) => d.toISOString().split('T')[0];
+
+  const d = (offset: number) => {
+    const dt = new Date(today);
+    dt.setDate(dt.getDate() + offset);
+    return fmt(dt);
+  };
+
+  return [
+    {
+      id: generateUUID(), title: 'Team Standup', description: 'Daily sync with the team',
+      category: 'work', color: CATEGORY_COLORS.work,
+      startDate: d(0), startTime: '09:00', endDate: d(0), endTime: '09:30',
+      location: 'Zoom', allDay: false, source: 'local', createdAt: now, updatedAt: now,
+    },
+    {
+      id: generateUUID(), title: 'Deep Work Block', description: 'No meetings, focused coding',
+      category: 'work', color: CATEGORY_COLORS.work,
+      startDate: d(0), startTime: '10:00', endDate: d(0), endTime: '12:00',
+      location: 'Home', allDay: false, source: 'local', createdAt: now, updatedAt: now,
+    },
+    {
+      id: generateUUID(), title: 'Gym Session', description: '',
+      category: 'health', color: CATEGORY_COLORS.health,
+      startDate: d(0), startTime: '17:30', endDate: d(0), endTime: '18:30',
+      location: 'Fitness Club', allDay: false, source: 'local', createdAt: now, updatedAt: now,
+    },
+    {
+      id: generateUUID(), title: 'Client Review', description: 'Present Q3 proposal',
+      category: 'work', color: CATEGORY_COLORS.work,
+      startDate: d(1), startTime: '11:00', endDate: d(1), endTime: '12:00',
+      location: 'Conference Room A', allDay: false, source: 'local', createdAt: now, updatedAt: now,
+    },
+    {
+      id: generateUUID(), title: 'Read: Atomic Habits', description: 'Chapter 5–7',
+      category: 'personal', color: CATEGORY_COLORS.personal,
+      startDate: d(1), startTime: '20:00', endDate: d(1), endTime: '21:00',
+      location: '', allDay: false, source: 'local', createdAt: now, updatedAt: now,
+    },
+    {
+      id: generateUUID(), title: 'Sprint Planning', description: 'Plan next two-week sprint',
+      category: 'work', color: CATEGORY_COLORS.work,
+      startDate: d(2), startTime: '09:00', endDate: d(2), endTime: '10:30',
+      location: 'Conference Room B', allDay: false, source: 'local', createdAt: now, updatedAt: now,
+    },
+    {
+      id: generateUUID(), title: 'Online Course: React Advanced', description: '',
+      category: 'study', color: CATEGORY_COLORS.study,
+      startDate: d(2), startTime: '14:00', endDate: d(2), endTime: '16:00',
+      location: '', allDay: false, source: 'local', createdAt: now, updatedAt: now,
+    },
+    {
+      id: generateUUID(), title: "Doctor's Appointment", description: 'Annual checkup',
+      category: 'health', color: CATEGORY_COLORS.health,
+      startDate: d(3), startTime: '10:30', endDate: d(3), endTime: '11:30',
+      location: 'City Medical Center', allDay: false, source: 'local', createdAt: now, updatedAt: now,
+    },
+    {
+      id: generateUUID(), title: 'Weekend Trip', description: 'Mountain hiking',
+      category: 'personal', color: CATEGORY_COLORS.personal,
+      startDate: d(5), startTime: '', endDate: d(6), endTime: '',
+      location: 'Blue Ridge Mountains', allDay: true, source: 'local', createdAt: now, updatedAt: now,
+    },
+  ];
+}
+
+export function useCalendarEvents() {
+  const { user } = useAuth();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isDemo = !user || user.isDemo;
+
+  const storageKey = isDemo ? CAL_KEY : `${CAL_KEY}_${user?.id}`;
+
+  useEffect(() => {
+    setLoading(true);
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try { setEvents(JSON.parse(saved)); } catch { setEvents([]); }
+    } else if (isDemo) {
+      const seed = buildSeedEvents();
+      setEvents(seed);
+      localStorage.setItem(storageKey, JSON.stringify(seed));
+    } else {
+      setEvents([]);
+    }
+    setLoading(false);
+  }, [storageKey, isDemo]);
+
+  const persist = (updated: CalendarEvent[]) => {
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+  };
+
+  const createEvent = (data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>): CalendarEvent => {
+    const now = new Date().toISOString();
+    const ev: CalendarEvent = { ...data, id: generateUUID(), source: 'local', createdAt: now, updatedAt: now };
+    const updated = [...events, ev];
+    setEvents(updated);
+    persist(updated);
+    return ev;
+  };
+
+  const updateEvent = (id: string, patch: Partial<Omit<CalendarEvent, 'id' | 'createdAt'>>): void => {
+    const updated = events.map(e =>
+      e.id === id ? { ...e, ...patch, updatedAt: new Date().toISOString() } : e
+    );
+    setEvents(updated);
+    persist(updated);
+  };
+
+  const deleteEvent = (id: string): void => {
+    const updated = events.filter(e => e.id !== id);
+    setEvents(updated);
+    persist(updated);
+  };
+
+  /** Get all events that overlap a given date ('YYYY-MM-DD') */
+  const getEventsForDate = (date: string): CalendarEvent[] =>
+    events.filter(e => e.startDate <= date && e.endDate >= date)
+      .sort((a, b) => (a.allDay ? -1 : b.allDay ? 1 : a.startTime.localeCompare(b.startTime)));
+
+  /** Get all events that overlap any day in [startDate, endDate] inclusive */
+  const getEventsForRange = (startDate: string, endDate: string): CalendarEvent[] =>
+    events.filter(e => e.startDate <= endDate && e.endDate >= startDate);
+
+  return { events, loading, createEvent, updateEvent, deleteEvent, getEventsForDate, getEventsForRange };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 10. DAILY PLANS (Phase 4)
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface DailyPlan {
+  id: string;
+  date: string;
+  schedule: { time: string; endTime: string; type: 'task' | 'event' | 'break'; title: string; notes: string; color?: string; priority?: string }[];
+  workloadMinutes: number;
+  topPriorities: string[];
+}
+
+export function useDailyPlans() {
+  const { user, loading: authLoading } = useAuth();
+  const [plans, setPlans] = useState<DailyPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    loadPlans();
+  }, [user, authLoading]);
+
+  const loadPlans = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const storageKey = user && !user.isDemo ? `priorify_daily_plans_${user.id}` : 'priorify_daily_plans';
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        setPlans(JSON.parse(stored));
+      } else {
+        setPlans([]);
+      }
+    } catch (err) {
+      console.error('Failed to load daily plans:', err);
+      setError('Failed to load daily plans.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const savePlans = async (newPlansOrUpdater: DailyPlan[] | ((prev: DailyPlan[]) => DailyPlan[])) => {
+    try {
+      const updatedPlans = typeof newPlansOrUpdater === 'function' ? newPlansOrUpdater(plans) : newPlansOrUpdater;
+      const storageKey = user && !user.isDemo ? `priorify_daily_plans_${user.id}` : 'priorify_daily_plans';
+      localStorage.setItem(storageKey, JSON.stringify(updatedPlans));
+      setPlans(updatedPlans);
+      return { data: updatedPlans, error: null };
+    } catch (err: any) {
+      console.error('Failed to save daily plans:', err);
+      return { data: null, error: err.message };
+    }
+  };
+
+  const getPlanForDate = (date: string) => {
+    return plans.find(p => p.date === date);
+  };
+
+  return { plans, getPlanForDate, savePlans, loading, error };
+}

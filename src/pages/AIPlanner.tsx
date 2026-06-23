@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, BookOpen, Clock, Calendar, Check, ChevronRight,
-  ChevronLeft, GraduationCap, Layers
+  ChevronLeft, GraduationCap, Layers, CheckCircle2, ListTodo, Plus, Target
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { checkAIRateLimit, recordAIRequest, getRemainingGenerations } from '../lib/aiRateLimit';
@@ -32,12 +32,15 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
   );
 }
 
-import { useAIPlans, generateUUID } from '../hooks/usePersistence';
+import { useAIPlans, generateUUID, useTasks } from '../hooks/usePersistence';
 import { generateStudyPlan } from '../lib/gemini';
+import { generateActionableTasks, GeneratedTask } from '../lib/aiEngine';
 
 export default function AIPlanner() {
   const { user } = useAuth();
   const { plans, savePlans: setPlans, loading, error: saveError } = useAIPlans();
+  const { createTask } = useTasks();
+  const [mode, setMode] = useState<'study-plan' | 'goal-tasks'>('study-plan');
   const [showForm, setShowForm] = useState(false);
   const [view, setView] = useState<'list' | 'calendar' | 'table'>('list');
   const [selectedPlan, setSelectedPlan] = useState<PlanItem | null>(null);
@@ -50,6 +53,14 @@ export default function AIPlanner() {
   const [generating, setGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Goal-to-Tasks state
+  const [goalText, setGoalText] = useState('');
+  const [goalContext, setGoalContext] = useState('');
+  const [generatedTasks, setGeneratedTasks] = useState<GeneratedTask[] | null>(null);
+  const [generatingTasks, setGeneratingTasks] = useState(false);
+  const [goalError, setGoalError] = useState<string | null>(null);
+  const [savedTasks, setSavedTasks] = useState(false);
 
 
   if (loading) {
@@ -141,6 +152,43 @@ export default function AIPlanner() {
     }
   };
 
+  const handleGenerateTasks = async () => {
+    setGoalError(null);
+    setSavedTasks(false);
+    if (!goalText.trim()) {
+      setGoalError('Please enter a goal.');
+      return;
+    }
+    setGeneratingTasks(true);
+    try {
+      const tasks = await generateActionableTasks(goalText, goalContext);
+      setGeneratedTasks(tasks);
+    } catch (err: any) {
+      setGoalError(err.message || 'Failed to generate tasks.');
+    } finally {
+      setGeneratingTasks(false);
+    }
+  };
+
+  const handleSaveTasks = async () => {
+    if (!generatedTasks) return;
+    const now = new Date();
+    // Save generated tasks using useTasks
+    // Space them out by 1 day each starting tomorrow
+    generatedTasks.forEach((t, i) => {
+      const due = new Date(now);
+      due.setDate(now.getDate() + i + 1);
+      createTask({
+        title: t.title,
+        description: t.description,
+        category: 'Goal: ' + goalText.slice(0, 20),
+        priority: t.priority,
+        dueDate: due.toISOString().split('T')[0],
+      });
+    });
+    setSavedTasks(true);
+  };
+
 
   const toggleComplete = (planId: string, dayIdx: number) => {
     setPlans(prev => prev.map(p => p.id === planId ? {
@@ -159,10 +207,106 @@ export default function AIPlanner() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-dark-100">AI Action Planner</h1>
+          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-accent-amber" /> AI Action Planner
+          </h1>
           <p className="text-sm text-dark-300 mt-1">Generate actionable plans and break goals into steps</p>
         </div>
-        <div className="flex items-center gap-2">
+        
+        <div className="flex bg-dark-950 p-1 rounded-xl border border-dark-600">
+          <button onClick={() => setMode('study-plan')} className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'study-plan' ? 'bg-accent-blue text-white shadow-md' : 'text-dark-400 hover:text-dark-200'}`}>Study Plans</button>
+          <button onClick={() => setMode('goal-tasks')} className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${mode === 'goal-tasks' ? 'bg-accent-amber text-white shadow-md' : 'text-dark-400 hover:text-dark-200'}`}>Goal to Tasks</button>
+        </div>
+      </div>
+
+      {mode === 'goal-tasks' && (
+        <div className="space-y-6">
+          <Card>
+            <h3 className="text-lg font-semibold text-dark-100 mb-4 flex items-center gap-2">
+              <Target className="w-5 h-5 text-accent-amber" /> Break down a Goal
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">What is your goal?</label>
+                <input
+                  value={goalText}
+                  onChange={e => setGoalText(e.target.value)}
+                  placeholder="e.g., Launch my personal portfolio website"
+                  className="w-full px-4 py-2.5 rounded-xl bg-dark-950 border border-dark-600 text-dark-100 text-sm focus:border-accent-amber focus:ring-1 focus:ring-accent-amber/30 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">Additional Context (Optional)</label>
+                <textarea
+                  value={goalContext}
+                  onChange={e => setGoalContext(e.target.value)}
+                  placeholder="e.g., I'm using React and Tailwind. I want it done in 2 weeks."
+                  rows={2}
+                  className="w-full px-4 py-2.5 rounded-xl bg-dark-950 border border-dark-600 text-dark-100 text-sm focus:border-accent-amber focus:ring-1 focus:ring-accent-amber/30 outline-none transition-all resize-none"
+                />
+              </div>
+              
+              {goalError && (
+                <div className="px-4 py-2.5 rounded-xl bg-accent-coral/10 border border-accent-coral/20 text-xs text-accent-coral">
+                  {goalError}
+                </div>
+              )}
+
+              <button
+                onClick={handleGenerateTasks}
+                disabled={generatingTasks || !goalText}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-accent-amber text-white font-semibold text-sm transition-all hover:bg-accent-amber/90 disabled:opacity-60"
+              >
+                {generatingTasks ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                Generate Tasks
+              </button>
+            </div>
+          </Card>
+
+          {generatedTasks && (
+            <Card>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-dark-100 flex items-center gap-2">
+                  <ListTodo className="w-5 h-5 text-accent-blue" /> Actionable Tasks
+                </h3>
+                <button
+                  onClick={handleSaveTasks}
+                  disabled={savedTasks}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-green text-white font-semibold text-xs transition-all hover:bg-accent-green/90 disabled:opacity-50"
+                >
+                  {savedTasks ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {savedTasks ? 'Saved to Tasks' : 'Save all to Tasks'}
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {generatedTasks.map((t, i) => (
+                  <div key={i} className="flex gap-4 p-4 rounded-xl bg-dark-900 border border-dark-600">
+                    <div className="w-8 h-8 rounded-full bg-dark-800 flex items-center justify-center flex-shrink-0 border border-dark-700">
+                      <span className="text-xs font-bold text-dark-300">{i + 1}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="text-sm font-semibold text-dark-100">{t.title}</h4>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${t.priority === 'critical' ? 'bg-accent-pink/10 text-accent-pink' : t.priority === 'high' ? 'bg-accent-coral/10 text-accent-coral' : t.priority === 'medium' ? 'bg-accent-amber/10 text-accent-amber' : 'bg-accent-green/10 text-accent-green'}`}>{t.priority}</span>
+                      </div>
+                      <p className="text-xs text-dark-400 mt-1">{t.description}</p>
+                      <p className="text-[10px] font-medium text-dark-500 mt-2 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Est. {t.estimatedMinutes} min
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {mode === 'study-plan' && (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
+            <div className="flex items-center gap-2">
           <div className="flex items-center bg-dark-950 rounded-xl p-1 border border-dark-600">
             {(['list', 'calendar', 'table'] as const).map(v => (
               <button
@@ -447,6 +591,8 @@ export default function AIPlanner() {
           </motion.div>
         )}
       </AnimatePresence>
+      </>
+      )}
     </div>
   );
 }
