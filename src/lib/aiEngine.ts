@@ -146,24 +146,146 @@ export function analyzeRisk(tasks: Task[], events: CalendarEvent[]): ScoredTask[
     });
 }
 
-// ─── Gemini helper ────────────────────────────────────────────────────────────
+export const geminiAnalytics = {
+  requestsSent: 0,
+  preventedByCache: 0,
+  preventedByDeduplication: 0,
+  queued: 0,
+};
 
-async function callGemini(prompt: string): Promise<string> {
-  if (!GEMINI_API_KEY) throw new Error('No Gemini API key');
-  const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json' },
-    }),
-  });
-  if (!res.ok) throw new Error(`Gemini ${res.status}`);
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Empty Gemini response');
-  return text;
+interface QueueItem {
+  prompt: string;
+  maxRetries: number;
+  bypassCache: boolean;
+  resolve: (value: string) => void;
+  reject: (reason?: any) => void;
 }
+
+const geminiQueue: QueueItem[] = [];
+let isGeminiProcessing = false;
+
+const geminiCache = new Map<string, { response: string; timestamp: number }>();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+const inFlightRequests = new Map<string, Promise<string>>();
+const requestTimestamps: number[] = [];
+
+async function processGeminiQueue() {
+  if (isGeminiProcessing || geminiQueue.length === 0) return;
+  isGeminiProcessing = true;
+
+  while (geminiQueue.length > 0) {
+    const now = Date.now();
+    const recentRequests = requestTimestamps.filter(t => now - t < 60000);
+    
+    if (recentRequests.length >= 4) {
+      // Rate limit hit: wait until the oldest request in the window expires
+      const oldest = Math.min(...recentRequests);
+      const waitTime = 60000 - (now - oldest) + 50;
+      await new Promise(r => setTimeout(r, waitTime));
+      continue;
+    }
+
+    const item = geminiQueue.shift();
+    if (!item) continue;
+
+    requestTimestamps.push(Date.now());
+    if (requestTimestamps.length > 10) requestTimestamps.shift();
+
+    try {
+      geminiAnalytics.requestsSent++;
+      const response = await executeGeminiRequest(item.prompt, item.maxRetries);
+      geminiCache.set(item.prompt, { response, timestamp: Date.now() });
+      item.resolve(response);
+    } catch (err) {
+      item.reject(err);
+    }
+  }
+
+  isGeminiProcessing = false;
+}
+
+async function executeGeminiRequest(prompt: string, maxRetries: number): Promise<string> {
+  if (!GEMINI_API_KEY) throw new Error('No Gemini API key');
+  
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { responseMimeType: 'application/json' },
+  };
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    
+    if (res.ok) {
+      const rawBody = await res.text();
+      try {
+        const data = JSON.parse(rawBody);
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error('Empty Gemini response');
+        return text;
+      } catch (e) {
+        throw new Error('Failed to parse Gemini response as JSON');
+      }
+    }
+    
+    if (res.status === 429 || res.status === 503) {
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+    }
+    
+    throw new Error(`Gemini ${res.status}`);
+  }
+  throw new Error('Max retries exceeded');
+}
+
+export async function callGemini(prompt: string, maxRetries = 3, bypassCache = false): Promise<string> {
+  if (bypassCache) {
+    geminiCache.delete(prompt);
+  } else {
+    const cached = geminiCache.get(prompt);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      geminiAnalytics.preventedByCache++;
+      return cached.response;
+    }
+  }
+
+  if (inFlightRequests.has(prompt)) {
+    geminiAnalytics.preventedByDeduplication++;
+    return inFlightRequests.get(prompt)!;
+  }
+
+  geminiAnalytics.queued++;
+  const promise = new Promise<string>((resolve, reject) => {
+    geminiQueue.push({ prompt, maxRetries, bypassCache, resolve, reject });
+  });
+
+  inFlightRequests.set(prompt, promise);
+
+  promise.finally(() => {
+    if (inFlightRequests.get(prompt) === promise) {
+      inFlightRequests.delete(prompt);
+    }
+    geminiAnalytics.queued--;
+  });
+
+  processGeminiQueue();
+  return promise;
+}
+
+export function getGeminiAnalytics() {
+  const now = Date.now();
+  const currentRpmUsage = requestTimestamps.filter(t => now - t < 60000).length;
+  return { ...geminiAnalytics, currentRpmUsage };
+}
+
+
 
 // ─── Daily Planner ────────────────────────────────────────────────────────────
 
@@ -186,6 +308,30 @@ function loadPlanCache(): PlanCache | null {
 export function savePlanCache(blocks: DayBlock[]) {
   const today = new Date().toISOString().split('T')[0];
   localStorage.setItem(PLAN_CACHE_KEY, JSON.stringify({ date: today, ts: Date.now(), blocks }));
+}
+
+export interface SmartPlanCache {
+  date: string;
+  ts: number;
+  plan: Omit<DailyPlan, 'id'>;
+}
+
+const SMART_PLAN_CACHE_KEY = 'priorify_smart_daily_plan_cache';
+
+function loadSmartPlanCache(): SmartPlanCache | null {
+  try {
+    const raw = localStorage.getItem(SMART_PLAN_CACHE_KEY);
+    if (!raw) return null;
+    const c: SmartPlanCache = JSON.parse(raw);
+    const today = new Date().toISOString().split('T')[0];
+    if (c.date !== today || Date.now() - c.ts > PLAN_CACHE_TTL) return null;
+    return c;
+  } catch { return null; }
+}
+
+export function saveSmartPlanCache(plan: Omit<DailyPlan, 'id'>) {
+  const today = new Date().toISOString().split('T')[0];
+  localStorage.setItem(SMART_PLAN_CACHE_KEY, JSON.stringify({ date: today, ts: Date.now(), plan }));
 }
 
 /** Local fallback: merge events + tasks into a simple time-block schedule */
@@ -244,9 +390,21 @@ export async function generateSmartDailyPlan(
   forceRefresh = false
 ): Promise<{ plan: Omit<DailyPlan, 'id'>; fromCache: boolean; fromAI: boolean }> {
   if (!forceRefresh) {
-    const cached = loadPlanCache();
-    // Return cached plan logic changed slightly since we need the full plan structure
-    // but to keep it simple, we'll just not use cache for SmartDailyPlan or we can adapt it.
+    const cached = loadSmartPlanCache();
+    if (cached) {
+      return { plan: cached.plan, fromCache: true, fromAI: true };
+    } else {
+      // Local Fallback instead of hitting Gemini automatically on page load
+      const topPriorities = tasks.filter(t => t.status !== 'completed').slice(0, 3).map(t => t.title);
+      const blocks = buildLocalDailyPlan(tasks, events);
+      const plan: Omit<DailyPlan, 'id'> = {
+        date: new Date().toISOString().split('T')[0],
+        schedule: blocks,
+        workloadMinutes: blocks.filter(b => b.type === 'task').length * 60,
+        topPriorities
+      };
+      return { plan, fromCache: false, fromAI: false };
+    }
   }
 
   const today = new Date().toISOString().split('T')[0];
@@ -298,6 +456,7 @@ type must be "event", "task", or "break".`;
         workloadMinutes: parsed.workloadMinutes || 240,
         topPriorities: parsed.topPriorities || topPriorities
       };
+      saveSmartPlanCache(plan);
       savePlanCache(schedule); // keep cache for backward compatibility in AI engine tab if needed
       return { plan, fromCache: false, fromAI: true };
     }
@@ -322,7 +481,11 @@ export async function generateDailyPlan(
 ): Promise<{ blocks: DayBlock[]; fromCache: boolean; fromAI: boolean }> {
   if (!forceRefresh) {
     const cached = loadPlanCache();
-    if (cached) return { blocks: cached.blocks, fromCache: true, fromAI: true };
+    if (cached) {
+      return { blocks: cached.blocks, fromCache: true, fromAI: true };
+    } else {
+      return { blocks: buildLocalDailyPlan(tasks, events), fromCache: false, fromAI: false };
+    }
   }
 
   const today = new Date().toISOString().split('T')[0];
@@ -449,7 +612,11 @@ export async function generateAIInsights(
 ): Promise<{ insights: AIInsights; fromCache: boolean; fromAI: boolean }> {
   if (!forceRefresh) {
     const cached = loadInsightsCache();
-    if (cached) return { insights: cached, fromCache: true, fromAI: true };
+    if (cached) {
+      return { insights: cached, fromCache: true, fromAI: true };
+    } else {
+      return { insights: buildLocalInsights(tasks, events), fromCache: false, fromAI: false };
+    }
   }
 
   const today = new Date().toISOString().split('T')[0];

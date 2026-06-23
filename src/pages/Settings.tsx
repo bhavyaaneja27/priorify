@@ -45,18 +45,16 @@ export default function Settings() {
 
   const { profile, saveProfile, loading: loadingProfile } = useUserProfile();
   const [profileName, setProfileName] = useState('');
-  const [profileUniversity, setProfileUniversity] = useState('');
-  const [profileYear, setProfileYear] = useState('');
-  const [profileBranch, setProfileBranch] = useState('');
+  const [profileOrganization, setProfileOrganization] = useState('');
+  const [profileProfession, setProfileProfession] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
 
   // Initial load
   useEffect(() => {
     if (profile) {
       setProfileName(profile.name || '');
-      setProfileUniversity(profile.university || '');
-      setProfileYear(profile.year || '');
-      setProfileBranch(profile.branch || '');
+      setProfileOrganization(profile.organization || '');
+      setProfileProfession(profile.profession || '');
     }
   }, [profile]);
 
@@ -69,28 +67,22 @@ export default function Settings() {
       setSaveMessage(nameResult.error!);
       return;
     }
-    const uniResult = validateTextField(profileUniversity, 'University', 120);
-    if (!uniResult.valid) {
-      setSaveMessage(uniResult.error!);
+    const orgResult = validateTextField(profileOrganization, 'Organization', 120);
+    if (!orgResult.valid) {
+      setSaveMessage(orgResult.error!);
       return;
     }
-    const yearResult = validateTextField(profileYear, 'Year', 30);
-    if (!yearResult.valid) {
-      setSaveMessage(yearResult.error!);
-      return;
-    }
-    const branchResult = validateTextField(profileBranch, 'Branch', 80);
-    if (!branchResult.valid) {
-      setSaveMessage(branchResult.error!);
+    const profResult = validateTextField(profileProfession, 'Profession', 80);
+    if (!profResult.valid) {
+      setSaveMessage(profResult.error!);
       return;
     }
 
     const updated = {
       ...profile,
       name: profileName.trim(),
-      university: profileUniversity.trim(),
-      year: profileYear.trim(),
-      branch: profileBranch.trim(),
+      organization: profileOrganization.trim(),
+      profession: profileProfession.trim(),
       avatar: profileName.trim().split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     };
     await saveProfile(updated);
@@ -193,8 +185,8 @@ export default function Settings() {
                     <h2 className="text-xl font-bold text-dark-100">{profile.name}</h2>
                     <p className="text-sm text-dark-300">{user?.email || profile.email}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-3.5 justify-center sm:justify-start">
-                      {profile.branch && <span className="px-3 py-0.5 rounded-full text-xs font-medium bg-accent-blue/10 text-accent-blue border border-accent-blue/20">{profile.branch}</span>}
-                      {profile.year && <span className="px-3 py-0.5 rounded-full text-xs font-medium bg-accent-teal/10 text-accent-teal border border-accent-teal/20">{profile.year}</span>}
+                      {profile.profession && <span className="px-3 py-0.5 rounded-full text-xs font-medium bg-accent-blue/10 text-accent-blue border border-accent-blue/20">{profile.profession}</span>}
+                      {profile.organization && <span className="px-3 py-0.5 rounded-full text-xs font-medium bg-accent-teal/10 text-accent-teal border border-accent-teal/20">{profile.organization}</span>}
                     </div>
                   </div>
                 </div>
@@ -215,24 +207,17 @@ export default function Settings() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">University</label>
+                    <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">Profession</label>
                     <div className="relative">
                       <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
-                      <input value={profileUniversity} onChange={e => setProfileUniversity(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-dark-950 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none transition-all" />
+                      <input value={profileProfession} onChange={e => setProfileProfession(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-dark-950 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none transition-all" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">Year</label>
+                    <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">Organization</label>
                     <div className="relative">
                       <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
-                      <input value={profileYear} onChange={e => setProfileYear(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-dark-950 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none transition-all" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">Branch</label>
-                    <div className="relative">
-                      <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
-                      <input value={profileBranch} onChange={e => setProfileBranch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-dark-950 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none transition-all" />
+                      <input value={profileOrganization} onChange={e => setProfileOrganization(e.target.value)} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-dark-950 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none transition-all" />
                     </div>
                   </div>
                 </div>

@@ -213,9 +213,10 @@ function DailyPlannerTab({ tasks, events, productivityData, onPlanGenerated }: {
   const currentPlan = dailyPlans.find(p => p.date === todayStr);
   const pendingSuggestion = getPendingSuggestionForDate(todayStr);
 
-  async function load(forceRefresh = false) {
+  async function load(forceRefresh = false, signal?: AbortSignal) {
     setLoading(true);
     const result = await generateSmartDailyPlan(tasks, events, productivityData, forceRefresh);
+    if (signal?.aborted) return;
     setBlocks(result.plan.schedule);
     setFromAI(result.fromAI);
     setFromCache(result.fromCache);
@@ -223,7 +224,11 @@ function DailyPlannerTab({ tasks, events, productivityData, onPlanGenerated }: {
     setLoading(false);
   }
 
-  useEffect(() => { load(false); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    load(false, controller.signal);
+    return () => controller.abort();
+  }, []);
 
   const handleCheckReschedule = async () => {
     if (!currentPlan) return;
@@ -518,16 +523,21 @@ function AIInsightsTab({ tasks, events }: { tasks: any[]; events: any[] }) {
   const [fromAI, setFromAI] = useState(false);
   const [fromCache, setFromCache] = useState(false);
 
-  async function load(forceRefresh = false) {
+  async function load(forceRefresh = false, signal?: AbortSignal) {
     setLoading(true);
     const result = await generateAIInsights(tasks, events, forceRefresh);
+    if (signal?.aborted) return;
     setInsights(result.insights);
     setFromAI(result.fromAI);
     setFromCache(result.fromCache);
     setLoading(false);
   }
 
-  useEffect(() => { load(false); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    load(false, controller.signal);
+    return () => controller.abort();
+  }, []);
 
   const insightCards = insights ? [
     { icon: Target,      label: 'Most Urgent',    text: insights.mostUrgent,    color: '#FB7185' },

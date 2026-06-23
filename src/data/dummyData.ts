@@ -106,11 +106,10 @@ export const pomodoroHistory = [
 const getInitialProfile = () => {
   const defaultProfile = {
     name: 'Alex Johnson',
-    email: 'alex@example.com',
+    email: 'alex.johnson@example.com',
     avatar: 'AJ',
-    branch: 'Product Design',
-    year: 'Professional',
-    university: 'Freelancer',
+    profession: 'Product Designer',
+    organization: 'Freelancer',
     totalXP: 1280,
     level: 12,
     streak: 7,

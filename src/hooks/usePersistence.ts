@@ -261,7 +261,7 @@ export function useMood() {
         try {
           const todayStr = new Date().toISOString().split('T')[0];
           const { data, error } = await supabase
-            .from('mood_history')
+            .from('productivity_checks')
             .select('*')
             .eq('user_id', user.id)
             .eq('date', todayStr)
@@ -301,12 +301,12 @@ export function useMood() {
       try {
         const todayStr = new Date().toISOString().split('T')[0];
         await supabase
-          .from('mood_history')
+          .from('productivity_checks')
           .delete()
           .eq('user_id', user.id)
           .eq('date', todayStr);
         if (newMood) {
-          await supabase.from('mood_history').insert({
+          await supabase.from('productivity_checks').insert({
             user_id: user.id,
             date: todayStr,
             mood_value: newMood,
@@ -353,7 +353,7 @@ export function useMoodHistory() {
       } else {
         try {
           const { data, error } = await supabase
-            .from('mood_history')
+            .from('productivity_checks')
             .select('*')
             .eq('user_id', user.id)
             .order('date', { ascending: true })
@@ -404,7 +404,7 @@ export function usePomodoroHistory() {
       } else {
         try {
           const { data, error } = await supabase
-            .from('pomodoro_history')
+            .from('focus_sessions')
             .select('*')
             .eq('user_id', user.id)
             .order('date', { ascending: true });
@@ -450,7 +450,7 @@ export function usePomodoroHistory() {
     } else {
       try {
         const { data } = await supabase
-          .from('pomodoro_history')
+          .from('focus_sessions')
           .select('*')
           .eq('user_id', user.id)
           .eq('date', todayStr)
@@ -458,14 +458,14 @@ export function usePomodoroHistory() {
 
         if (data) {
           await supabase
-            .from('pomodoro_history')
+            .from('focus_sessions')
             .update({
               sessions: data.sessions + 1,
               total_minutes: data.total_minutes + minutes
             })
             .eq('id', data.id);
         } else {
-          await supabase.from('pomodoro_history').insert({
+          await supabase.from('focus_sessions').insert({
             user_id: user.id,
             date: todayStr,
             sessions: 1,
@@ -502,11 +502,10 @@ export function useUserProfile() {
         } else {
           setProfile({
             name: 'Alex Johnson',
-            email: 'alex.johnson@university.edu',
+            email: 'alex.johnson@example.com',
             avatar: 'AJ',
-            branch: 'Product Design',
-            year: 'Professional',
-            university: 'Freelancer',
+            profession: 'Product Designer',
+            organization: 'Freelancer',
             totalXP: 1280,
             level: 12,
             streak: 7,
@@ -522,7 +521,7 @@ export function useUserProfile() {
             .maybeSingle();
 
           const { data: pomoData } = await supabase
-            .from('pomodoro_history')
+            .from('focus_sessions')
             .select('total_minutes')
             .eq('user_id', user.id);
           const totalMins = pomoData?.reduce((acc, curr) => acc + (curr.total_minutes || 0), 0) || 0;
@@ -530,12 +529,11 @@ export function useUserProfile() {
 
           if (data && !error) {
             setProfile({
-              name: data.full_name || user.name || 'Student',
+              name: data.full_name || user.name || 'Professional',
               email: user.email || '',
-              avatar: (data.full_name || user.name || 'Student').split(' ').map((n: any) => n[0]).join('').toUpperCase().slice(0, 2),
-              branch: data.branch || '',
-              year: data.year || '',
-              university: data.university || '',
+              avatar: (data.full_name || user.name || 'Professional').split(' ').map((n: any) => n[0]).join('').toUpperCase().slice(0, 2),
+              profession: data.profession || '',
+              organization: data.organization || '',
               totalXP: data.xp || 0,
               level: data.level || 1,
               streak: data.streak || 1,
@@ -544,10 +542,9 @@ export function useUserProfile() {
           } else {
             const newProfile = {
               id: user.id,
-              full_name: user.name || 'Student',
-              university: '',
-              branch: '',
-              year: '',
+              full_name: user.name || 'Professional',
+              organization: '',
+              profession: '',
               xp: 0,
               streak: 1,
               level: 1
@@ -557,9 +554,8 @@ export function useUserProfile() {
               name: newProfile.full_name,
               email: user.email || '',
               avatar: newProfile.full_name.split(' ').map((n: any) => n[0]).join('').toUpperCase().slice(0, 2),
-              branch: newProfile.branch,
-              year: newProfile.year,
-              university: newProfile.university,
+              profession: newProfile.profession,
+              organization: newProfile.organization,
               totalXP: newProfile.xp,
               level: newProfile.level,
               streak: newProfile.streak,
@@ -585,9 +581,8 @@ export function useUserProfile() {
           .from('profiles')
           .update({
             full_name: updated.name,
-            university: updated.university,
-            branch: updated.branch,
-            year: updated.year,
+            organization: updated.organization,
+            profession: updated.profession,
             xp: updated.totalXP,
             level: updated.level,
             streak: updated.streak
@@ -696,17 +691,32 @@ export function useTasks() {
           localStorage.setItem(TASKS_KEY, JSON.stringify(seed));
         }
       } else {
-        // Future: fetch from supabase 'priorify_tasks' table
-        // For now fall back to localStorage even for authenticated users
-        // (Supabase table will be added in a future schema migration)
-        const saved = localStorage.getItem(`${TASKS_KEY}_${user.id}`);
-        if (saved) {
-          try {
-            setTasks(JSON.parse(saved));
-          } catch {
-            setTasks([]);
+        try {
+          const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+          if (data && !error && data.length > 0) {
+            setTasks(data.map(d => ({
+              id: d.id,
+              title: d.title,
+              description: d.description || '',
+              category: d.category || 'Work',
+              priority: d.priority,
+              dueDate: d.due_date,
+              status: d.status,
+              createdAt: d.created_at,
+              updatedAt: d.updated_at
+            })));
+          } else {
+            // Local fallback for smooth migration test
+            const saved = localStorage.getItem(`${TASKS_KEY}_${user.id}`);
+            if (saved) {
+              try { setTasks(JSON.parse(saved)); } catch { setTasks([]); }
+            } else { setTasks([]); }
           }
-        } else {
+        } catch {
           setTasks([]);
         }
       }
@@ -715,11 +725,41 @@ export function useTasks() {
     load();
   }, [user, isDemo]);
 
-  const persist = (updated: Task[]) => {
+  const persist = async (updated: Task[], changedTask?: Task, operation?: 'insert' | 'update' | 'delete') => {
     if (isDemo) {
       localStorage.setItem(TASKS_KEY, JSON.stringify(updated));
     } else {
       localStorage.setItem(`${TASKS_KEY}_${user!.id}`, JSON.stringify(updated));
+      if (changedTask && operation) {
+        try {
+          if (operation === 'insert') {
+            await supabase.from('tasks').insert({
+              id: changedTask.id,
+              user_id: user!.id,
+              title: changedTask.title,
+              description: changedTask.description,
+              category: changedTask.category,
+              priority: changedTask.priority,
+              due_date: changedTask.dueDate,
+              status: changedTask.status,
+              created_at: changedTask.createdAt,
+              updated_at: changedTask.updatedAt
+            });
+          } else if (operation === 'update') {
+            await supabase.from('tasks').update({
+              title: changedTask.title,
+              description: changedTask.description,
+              category: changedTask.category,
+              priority: changedTask.priority,
+              due_date: changedTask.dueDate,
+              status: changedTask.status,
+              updated_at: changedTask.updatedAt
+            }).eq('id', changedTask.id);
+          } else if (operation === 'delete') {
+            await supabase.from('tasks').delete().eq('id', changedTask.id);
+          }
+        } catch (e) { console.error('Supabase tasks error', e); }
+      }
     }
   };
 
@@ -728,22 +768,28 @@ export function useTasks() {
     const task: Task = { ...data, id: generateUUID(), createdAt: now, updatedAt: now };
     const updated = [task, ...tasks];
     setTasks(updated);
-    persist(updated);
+    persist(updated, task, 'insert');
     return task;
   };
 
   const updateTask = (id: string, patch: Partial<Omit<Task, 'id' | 'createdAt'>>): void => {
-    const updated = tasks.map(t =>
-      t.id === id ? { ...t, ...patch, updatedAt: new Date().toISOString() } : t
-    );
+    let updatedTask: Task | undefined;
+    const updated = tasks.map(t => {
+      if (t.id === id) {
+        updatedTask = { ...t, ...patch, updatedAt: new Date().toISOString() };
+        return updatedTask;
+      }
+      return t;
+    });
     setTasks(updated);
-    persist(updated);
+    if (updatedTask) persist(updated, updatedTask, 'update');
   };
 
   const deleteTask = (id: string): void => {
+    const taskToDelete = tasks.find(t => t.id === id);
     const updated = tasks.filter(t => t.id !== id);
     setTasks(updated);
-    persist(updated);
+    if (taskToDelete) persist(updated, taskToDelete, 'delete');
   };
 
   return { tasks, loading, error, createTask, updateTask, deleteTask };
@@ -871,21 +917,96 @@ export function useCalendarEvents() {
 
   useEffect(() => {
     setLoading(true);
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try { setEvents(JSON.parse(saved)); } catch { setEvents([]); }
-    } else if (isDemo) {
-      const seed = buildSeedEvents();
-      setEvents(seed);
-      localStorage.setItem(storageKey, JSON.stringify(seed));
-    } else {
-      setEvents([]);
-    }
-    setLoading(false);
-  }, [storageKey, isDemo]);
+    const loadEvents = async () => {
+      if (isDemo) {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          try { setEvents(JSON.parse(saved)); } catch { setEvents([]); }
+        } else {
+          const seed = buildSeedEvents();
+          setEvents(seed);
+          localStorage.setItem(storageKey, JSON.stringify(seed));
+        }
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from('calendar_events')
+            .select('*')
+            .eq('user_id', user.id);
+          
+          if (data && !error && data.length > 0) {
+            setEvents(data.map((d: any) => ({
+              id: d.id,
+              title: d.title,
+              description: d.description || '',
+              category: d.category as EventCategory,
+              color: d.color || CATEGORY_COLORS[d.category as EventCategory] || CATEGORY_COLORS.other,
+              startDate: d.start_date,
+              startTime: d.start_time || '',
+              endDate: d.end_date,
+              endTime: d.end_time || '',
+              location: d.location || '',
+              allDay: d.all_day,
+              source: 'local',
+              createdAt: d.created_at,
+              updatedAt: d.updated_at
+            })));
+          } else {
+            // Local fallback check
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+              try { setEvents(JSON.parse(saved)); } catch { setEvents([]); }
+            } else { setEvents([]); }
+          }
+        } catch {
+          setEvents([]);
+        }
+      }
+      setLoading(false);
+    };
+    loadEvents();
+  }, [storageKey, isDemo, user]);
 
-  const persist = (updated: CalendarEvent[]) => {
+  const persist = async (updated: CalendarEvent[], changedEvent?: CalendarEvent, operation?: 'insert' | 'update' | 'delete') => {
     localStorage.setItem(storageKey, JSON.stringify(updated));
+    if (!isDemo && changedEvent && operation) {
+      try {
+        if (operation === 'insert') {
+          await supabase.from('calendar_events').insert({
+            id: changedEvent.id,
+            user_id: user!.id,
+            title: changedEvent.title,
+            description: changedEvent.description,
+            category: changedEvent.category,
+            color: changedEvent.color,
+            start_date: changedEvent.startDate,
+            start_time: changedEvent.startTime || null,
+            end_date: changedEvent.endDate,
+            end_time: changedEvent.endTime || null,
+            all_day: changedEvent.allDay,
+            location: changedEvent.location,
+            created_at: changedEvent.createdAt,
+            updated_at: changedEvent.updatedAt
+          });
+        } else if (operation === 'update') {
+          await supabase.from('calendar_events').update({
+            title: changedEvent.title,
+            description: changedEvent.description,
+            category: changedEvent.category,
+            color: changedEvent.color,
+            start_date: changedEvent.startDate,
+            start_time: changedEvent.startTime || null,
+            end_date: changedEvent.endDate,
+            end_time: changedEvent.endTime || null,
+            all_day: changedEvent.allDay,
+            location: changedEvent.location,
+            updated_at: changedEvent.updatedAt
+          }).eq('id', changedEvent.id);
+        } else if (operation === 'delete') {
+          await supabase.from('calendar_events').delete().eq('id', changedEvent.id);
+        }
+      } catch (e) { console.error('Supabase event error', e); }
+    }
   };
 
   const createEvent = (data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>): CalendarEvent => {
@@ -893,22 +1014,28 @@ export function useCalendarEvents() {
     const ev: CalendarEvent = { ...data, id: generateUUID(), source: 'local', createdAt: now, updatedAt: now };
     const updated = [...events, ev];
     setEvents(updated);
-    persist(updated);
+    persist(updated, ev, 'insert');
     return ev;
   };
 
   const updateEvent = (id: string, patch: Partial<Omit<CalendarEvent, 'id' | 'createdAt'>>): void => {
-    const updated = events.map(e =>
-      e.id === id ? { ...e, ...patch, updatedAt: new Date().toISOString() } : e
-    );
+    let updatedEvent: CalendarEvent | undefined;
+    const updated = events.map(e => {
+      if (e.id === id) {
+        updatedEvent = { ...e, ...patch, updatedAt: new Date().toISOString() };
+        return updatedEvent;
+      }
+      return e;
+    });
     setEvents(updated);
-    persist(updated);
+    if (updatedEvent) persist(updated, updatedEvent, 'update');
   };
 
   const deleteEvent = (id: string): void => {
+    const eventToDelete = events.find(e => e.id === id);
     const updated = events.filter(e => e.id !== id);
     setEvents(updated);
-    persist(updated);
+    if (eventToDelete) persist(updated, eventToDelete, 'delete');
   };
 
   /** Get all events that overlap a given date ('YYYY-MM-DD') */
@@ -950,12 +1077,38 @@ export function useDailyPlans() {
     setLoading(true);
     setError(null);
     try {
-      const storageKey = user && !user.isDemo ? `priorify_daily_plans_${user.id}` : 'priorify_daily_plans';
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        setPlans(JSON.parse(stored));
+      if (user && !user.isDemo) {
+        const { data, error } = await supabase
+          .from('daily_plans')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        if (data && !error && data.length > 0) {
+          setPlans(data.map(d => ({
+            id: d.id,
+            date: d.date,
+            schedule: d.schedule,
+            workloadMinutes: d.workload_minutes,
+            topPriorities: d.top_priorities
+          })));
+        } else {
+          // Local fallback check
+          const storageKey = `priorify_daily_plans_${user.id}`;
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            setPlans(JSON.parse(stored));
+          } else {
+            setPlans([]);
+          }
+        }
       } else {
-        setPlans([]);
+        const storageKey = 'priorify_daily_plans';
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          setPlans(JSON.parse(stored));
+        } else {
+          setPlans([]);
+        }
       }
     } catch (err) {
       console.error('Failed to load daily plans:', err);
@@ -970,6 +1123,29 @@ export function useDailyPlans() {
       const updatedPlans = typeof newPlansOrUpdater === 'function' ? newPlansOrUpdater(plans) : newPlansOrUpdater;
       const storageKey = user && !user.isDemo ? `priorify_daily_plans_${user.id}` : 'priorify_daily_plans';
       localStorage.setItem(storageKey, JSON.stringify(updatedPlans));
+      
+      if (user && !user.isDemo) {
+        try {
+          const planData = updatedPlans.map(p => ({
+            id: p.id,
+            user_id: user.id,
+            date: p.date,
+            schedule: p.schedule,
+            workload_minutes: p.workloadMinutes,
+            top_priorities: p.topPriorities,
+            created_at: new Date().toISOString()
+          }));
+          
+          if (planData.length > 0) {
+            // Delete old ones first to prevent unique constraint violations simply
+            await supabase.from('daily_plans').delete().eq('user_id', user.id);
+            await supabase.from('daily_plans').insert(planData);
+          }
+        } catch (e) {
+          console.error('Supabase save daily plans error', e);
+        }
+      }
+      
       setPlans(updatedPlans);
       return { data: updatedPlans, error: null };
     } catch (err: any) {
