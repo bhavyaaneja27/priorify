@@ -183,7 +183,7 @@ function loadPlanCache(): PlanCache | null {
   } catch { return null; }
 }
 
-function savePlanCache(blocks: DayBlock[]) {
+export function savePlanCache(blocks: DayBlock[]) {
   const today = new Date().toISOString().split('T')[0];
   localStorage.setItem(PLAN_CACHE_KEY, JSON.stringify({ date: today, ts: Date.now(), blocks }));
 }
@@ -542,6 +542,140 @@ Return ONLY valid JSON:
   } catch (err) {
     console.error('[aiEngine] Goal to Tasks failed:', err);
     throw err;
+  }
+}
+
+// ─── Phase 5: Smart Rescheduling ──────────────────────────────────────────────
+
+export function checkRescheduleNeed(
+  tasks: Task[],
+  events: CalendarEvent[],
+  currentPlan: DailyPlan
+): { needed: boolean; reason?: string } {
+  const today = currentPlan.date;
+  const todayEvents = events.filter(e => e.startDate <= today && e.endDate >= today && !e.allDay);
+  const pendingTasks = tasks.filter(t => t.status !== 'completed');
+
+  // 1. Check for newly added high-priority tasks not in the plan
+  const planTaskTitles = new Set(currentPlan.schedule.filter(b => b.type === 'task').map(b => b.title));
+  const newHighPriority = pendingTasks.find(t => 
+    (t.priority === 'critical' || t.priority === 'high') && 
+    !planTaskTitles.has(t.title)
+  );
+
+  if (newHighPriority) {
+    return { needed: true, reason: `New high priority task added: "${newHighPriority.title}"` };
+  }
+
+  // 2. Check for completed tasks that are still in the plan
+  const completedTaskTitles = new Set(tasks.filter(t => t.status === 'completed').map(t => t.title));
+  const planHasCompleted = currentPlan.schedule.find(b => b.type === 'task' && completedTaskTitles.has(b.title));
+
+  if (planHasCompleted) {
+    return { needed: true, reason: `You completed "${planHasCompleted.title}". Let's update your schedule.` };
+  }
+
+  // 3. Check for calendar conflicts
+  for (const block of currentPlan.schedule) {
+    if (block.type === 'task') {
+      const conflict = todayEvents.find(e => 
+        (e.startTime < block.endTime && e.endTime > block.time)
+      );
+      if (conflict) {
+        return { needed: true, reason: `Calendar conflict detected between task "${block.title}" and event "${conflict.title}".` };
+      }
+    }
+  }
+
+  // 4. Overdue high-priority tasks from previous days
+  const todayDate = new Date();
+  todayDate.setHours(0,0,0,0);
+  const overdue = pendingTasks.find(t => {
+    const due = new Date(t.dueDate);
+    due.setHours(0,0,0,0);
+    return due < todayDate && (t.priority === 'critical' || t.priority === 'high') && !planTaskTitles.has(t.title);
+  });
+
+  if (overdue) {
+    return { needed: true, reason: `You have overdue high-priority tasks like "${overdue.title}".` };
+  }
+
+  return { needed: false };
+}
+
+export async function generateRescheduleSuggestion(
+  tasks: Task[],
+  events: CalendarEvent[],
+  currentPlan: DailyPlan,
+  rescheduleReason: string
+) {
+  const today = currentPlan.date;
+  const todayEvents = events.filter(e => e.startDate <= today && e.endDate >= today && !e.allDay);
+  const pendingTasks = tasks.filter(t => t.status !== 'completed').slice(0, 8);
+
+  const prompt = `You are Priorify, an AI productivity assistant. The user's current daily plan needs rescheduling.
+Reason for rescheduling: "${rescheduleReason}"
+
+Fixed calendar events today (cannot be moved):
+${JSON.stringify(todayEvents.map(e => ({ title: e.title, start: e.startTime, end: e.endTime })), null, 2)}
+
+Current Daily Plan:
+${JSON.stringify(currentPlan.schedule, null, 2)}
+
+Pending Tasks (to include if possible, prioritize high/critical):
+${JSON.stringify(pendingTasks.map(t => ({ title: t.title, priority: t.priority })), null, 2)}
+
+Task: Create a NEW, updated daily schedule. Then list the specific changes you made compared to the old plan.
+Return ONLY valid JSON in this exact format:
+{
+  "suggestedPlan": {
+    "schedule": [ { "time": "09:00", "endTime": "10:30", "type": "task", "title": "...", "notes": "..." } ],
+    "workloadMinutes": 180,
+    "topPriorities": ["..."]
+  },
+  "reason": "Explain the rescheduling strategy in 1-2 sentences.",
+  "changes": [
+    { "type": "add", "time": "14:00", "title": "Task A", "reason": "New critical task" },
+    { "type": "remove", "time": "10:00", "title": "Task B", "reason": "Already completed" },
+    { "type": "modify", "time": "15:00", "title": "Task C", "reason": "Moved to resolve conflict" }
+  ]
+}
+type for schedule blocks must be "event", "task", or "break".`;
+
+  try {
+    const raw = await callGemini(prompt);
+    const parsed = JSON.parse(raw.trim());
+    if (parsed.suggestedPlan && Array.isArray(parsed.suggestedPlan.schedule) && Array.isArray(parsed.changes)) {
+      return parsed; // Returns { suggestedPlan, reason, changes }
+    }
+    throw new Error('Invalid reschedule format');
+  } catch (err) {
+    console.warn('[aiEngine] generateRescheduleSuggestion failed, using local fallback:', err);
+    
+    // Local Fallback Algorithm
+    const newBlocks = buildLocalDailyPlan(tasks, events);
+    const topPriorities = pendingTasks.slice(0, 3).map(t => t.title);
+
+    // Make a visible modification for testing
+    if (newBlocks.length > 0) {
+      newBlocks[0] = { ...newBlocks[0], title: `[Rescheduled] ${newBlocks[0].title}` };
+    } else {
+      newBlocks.push({ time: "12:00", endTime: "13:00", type: "task", title: "[Rescheduled] Catch up", notes: "Added by fallback" });
+    }
+    
+    return {
+      suggestedPlan: {
+        date: currentPlan.date,
+        id: currentPlan.id,
+        schedule: newBlocks,
+        workloadMinutes: newBlocks.filter(b => b.type === 'task').length * 60,
+        topPriorities
+      },
+      reason: "Locally recalculated your schedule to handle recent changes.",
+      changes: [
+        { type: "modify", time: newBlocks[0]?.time || "12:00", title: newBlocks[0]?.title || "Catch up", reason: rescheduleReason }
+      ]
+    };
   }
 }
 

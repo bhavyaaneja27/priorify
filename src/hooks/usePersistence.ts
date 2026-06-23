@@ -984,3 +984,82 @@ export function useDailyPlans() {
 
   return { plans, getPlanForDate, savePlans, loading, error };
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 11. Rescheduling Suggestions (Phase 5)
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface RescheduleBlockChange {
+  type: 'add' | 'remove' | 'modify';
+  time: string;
+  title: string;
+  reason: string;
+  block?: any;
+}
+
+export interface RescheduleSuggestion {
+  id: string;
+  date: string;
+  reason: string;
+  suggestedPlan: DailyPlan;
+  changes: RescheduleBlockChange[];
+  status: 'pending' | 'accepted' | 'rejected' | 'partially_applied';
+  createdAt: number;
+}
+
+export function useRescheduling() {
+  const { user, loading: authLoading } = useAuth();
+  const [suggestions, setSuggestions] = useState<RescheduleSuggestion[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (authLoading) return;
+    const storageKey = user && !user.isDemo ? `priorify_reschedules_${user.id}` : 'priorify_reschedules';
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        setSuggestions(JSON.parse(stored));
+      } else {
+        setSuggestions([]);
+      }
+    } catch {
+      setSuggestions([]);
+    }
+    setLoading(false);
+  }, [user, authLoading]);
+
+  const saveSuggestions = (newSuggestions: RescheduleSuggestion[]) => {
+    const storageKey = user && !user.isDemo ? `priorify_reschedules_${user.id}` : 'priorify_reschedules';
+    localStorage.setItem(storageKey, JSON.stringify(newSuggestions));
+    setSuggestions(newSuggestions);
+  };
+
+  const addSuggestion = (suggestion: Omit<RescheduleSuggestion, 'id' | 'status' | 'createdAt'>) => {
+    const newSug: RescheduleSuggestion = {
+      ...suggestion,
+      id: generateUUID(),
+      status: 'pending',
+      createdAt: Date.now()
+    };
+    // Keep only the latest pending suggestion for a given date, reject older ones
+    const updated = suggestions.map(s => 
+      (s.date === suggestion.date && s.status === 'pending') ? { ...s, status: 'rejected' as const } : s
+    );
+    saveSuggestions([...updated, newSug]);
+    return newSug;
+  };
+
+  const updateSuggestionStatus = (id: string, status: RescheduleSuggestion['status']) => {
+    const updated = suggestions.map(s => s.id === id ? { ...s, status } : s);
+    saveSuggestions(updated);
+  };
+
+  const getPendingSuggestionForDate = (date: string) => {
+    // Return newest pending suggestion for date
+    return suggestions
+      .filter(s => s.date === date && s.status === 'pending')
+      .sort((a, b) => b.createdAt - a.createdAt)[0];
+  };
+
+  return { suggestions, loading, addSuggestion, updateSuggestionStatus, getPendingSuggestionForDate };
+}
