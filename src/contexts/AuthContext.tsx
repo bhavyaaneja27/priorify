@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInAsDemo = () => {
-    setUser({ id: 'demo', email: 'demo@studyai.app', isDemo: true });
+    setUser({ id: 'demo', email: 'demo@priorify.app', isDemo: true });
   };
 
   const signUp = async (email: string, password: string, name?: string) => {

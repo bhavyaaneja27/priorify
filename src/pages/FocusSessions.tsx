@@ -51,7 +51,7 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
   );
 }
 
-export default function Pomodoro() {
+export default function FocusSessions() {
   const { history, addPomodoroSession } = usePomodoroHistory();
   const [mode, setMode] = useState<'work' | 'break' | 'longBreak'>('work');
   const [timeLeft, setTimeLeft] = useState(WORK_MINUTES * 60);
@@ -59,12 +59,12 @@ export default function Pomodoro() {
   const [sessions, setSessions] = useState(0);
   const [totalSessions, setTotalSessions] = useState(0);
   const [breakSuggestions] = useState([
-    "Stretch your arms and neck",
-    "Drink a glass of water",
-    "Look out the window for 20 seconds",
-    "Do 10 jumping jacks",
-    "Take 5 deep breaths",
-    "Walk around for a minute"
+    'Stretch your arms and neck',
+    'Drink a glass of water',
+    'Look away from the screen for 20 seconds',
+    'Take 5 deep breaths',
+    'Walk around for a minute',
+    'Step outside for fresh air',
   ]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -109,7 +109,7 @@ export default function Pomodoro() {
       if (mode === 'work') {
         setTotalSessions(t => t + 1);
         addPomodoroSession(25);
-        sendNotification("Focus Block Completed!", "Great job! Time for a short break.");
+        sendNotification('Focus session complete!', 'Great work. Time for a short break.');
         setSessions(s => {
           if (s >= 3) {
             setMode('longBreak');
@@ -121,7 +121,7 @@ export default function Pomodoro() {
         });
       } else {
         setMode('work');
-        sendNotification("Break Over!", "Time to get back to work.");
+        sendNotification('Break over', 'Ready for your next focus session.');
       }
     }
   }, [timeLeft, mode]);
@@ -148,13 +148,11 @@ export default function Pomodoro() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-dark-100">Pomodoro Focus</h1>
-        <p className="text-sm text-dark-300 mt-1">Stay focused with timed intervals</p>
+        <h1 className="text-2xl font-bold text-dark-100">Focus Sessions</h1>
+        <p className="text-sm text-dark-300 mt-1">Deep work in timed intervals — stay on track</p>
       </div>
 
-      {/* Timer Card */}
       <Card className="flex flex-col items-center py-8">
-        {/* Mode tabs */}
         <div className="flex items-center gap-2 mb-8 bg-dark-950 rounded-xl p-1 border border-dark-600">
           <button
             onClick={() => setMode('work')}
@@ -178,7 +176,6 @@ export default function Pomodoro() {
 
         <CircularTimer total={totalTime} remaining={timeLeft} color={timerColor} label={mode === 'work' ? 'Focus' : mode === 'break' ? 'Short Break' : 'Long Break'} />
 
-        {/* Controls */}
         <div className="flex items-center gap-4 mt-8">
           <button
             onClick={handleReset}
@@ -204,7 +201,6 @@ export default function Pomodoro() {
         </div>
       </Card>
 
-      {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-accent-blue/10 flex items-center justify-center">
@@ -244,7 +240,6 @@ export default function Pomodoro() {
         </Card>
       </div>
 
-      {/* Break Suggestions */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <div className="w-8 h-8 rounded-lg bg-accent-teal/10 flex items-center justify-center">
@@ -264,14 +259,13 @@ export default function Pomodoro() {
         </div>
       </Card>
 
-      {/* History Chart */}
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <div className="w-8 h-8 rounded-lg bg-accent-blue/10 flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-accent-blue" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-dark-100">Study History</h3>
+            <h3 className="text-sm font-semibold text-dark-100">Focus History</h3>
             <p className="text-xs text-dark-300">Last 7 days</p>
           </div>
         </div>

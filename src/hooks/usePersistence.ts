@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { timetableSlots, attendance, aiPlans, pomodoroHistory, subjects } from '../data/dummyData';
+import { calendarSlots, aiPlans, pomodoroHistory } from '../data/dummyData';
 
 const groupSlotsByDay = (flatSlots: any[]) => {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -33,7 +33,7 @@ export const generateUUID = () => {
 // 1. Timetable Hook
 export function useTimetable() {
   const { user } = useAuth();
-  const [schedule, setSchedule] = useState<any[]>(timetableSlots);
+  const [schedule, setSchedule] = useState<any[]>(calendarSlots);
   const [loading, setLoading] = useState(true);
 
   const isDemo = !user || user.isDemo;
@@ -48,7 +48,7 @@ export function useTimetable() {
             setSchedule(JSON.parse(saved));
           } catch {}
         } else {
-          setSchedule(timetableSlots);
+          setSchedule(calendarSlots);
         }
       } else {
         try {
@@ -111,85 +111,7 @@ export function useTimetable() {
   return { schedule, saveSchedule, loading };
 }
 
-// 2. Attendance Hook
-export function useAttendance() {
-  const { user } = useAuth();
-  const [attendanceList, setAttendanceList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const isDemo = !user || user.isDemo;
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      if (isDemo) {
-        const saved = localStorage.getItem('attendance_data');
-        if (saved) {
-          try {
-            setAttendanceList(JSON.parse(saved));
-          } catch {}
-        } else {
-          setAttendanceList(attendance);
-        }
-      } else {
-        try {
-          const { data, error } = await supabase
-            .from('attendance')
-            .select('*')
-            .eq('user_id', user.id);
-          if (data && data.length > 0 && !error) {
-            setAttendanceList(data);
-          } else {
-            setAttendanceList([]);
-          }
-        } catch {
-          setAttendanceList([]);
-        }
-      }
-      setLoading(false);
-    }
-    load();
-  }, [user, isDemo]);
-
-  const saveAttendance = async (updater: any[] | ((prev: any[]) => any[])) => {
-    const resolvedList = typeof updater === 'function' ? updater(attendanceList) : updater;
-    setAttendanceList(resolvedList);
-
-    if (isDemo) {
-      localStorage.setItem('attendance_data', JSON.stringify(resolvedList));
-    } else {
-      try {
-        console.log(`[Supabase attendance] Saving attendance for user ${user.id}...`);
-        const { error: delError } = await supabase.from('attendance').delete().eq('user_id', user.id);
-        if (delError) {
-          console.error('[Supabase attendance] Error deleting existing records:', delError);
-        }
-
-        const mapped = resolvedList.map(a => ({
-          user_id: user.id,
-          subject: a.subject,
-          present: a.present,
-          total: a.total,
-          color: a.color
-        }));
-        if (mapped.length > 0) {
-          const { error: insError } = await supabase.from('attendance').insert(mapped);
-          if (insError) {
-            console.error('[Supabase attendance] Error inserting records:', insError);
-          } else {
-            console.log(`[Supabase attendance] Successfully saved ${mapped.length} records.`);
-          }
-        }
-      } catch (err) {
-        console.error('[Supabase attendance] Catch error in saveAttendance:', err);
-      }
-    }
-  };
-
-  return { attendanceList, saveAttendance, loading };
-}
-
-// 3. AI Plans Hook
+// 2. AI Plans Hook
 export function useAIPlans() {
   const { user } = useAuth();
   const [plans, setPlans] = useState<any[]>(aiPlans);
@@ -582,9 +504,9 @@ export function useUserProfile() {
             name: 'Alex Johnson',
             email: 'alex.johnson@university.edu',
             avatar: 'AJ',
-            branch: 'Computer Science',
-            year: '3rd Year',
-            university: 'MIT Engineering',
+            branch: 'Product Design',
+            year: 'Professional',
+            university: 'Freelancer',
             totalXP: 1280,
             level: 12,
             streak: 7,
@@ -676,93 +598,4 @@ export function useUserProfile() {
   };
 
   return { profile, saveProfile, loading };
-}
-
-// 8. Subjects Hook
-export function useSubjects() {
-  const { user } = useAuth();
-  const [subjectsList, setSubjectsList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const isDemo = !user || user.isDemo;
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      if (isDemo) {
-        const saved = localStorage.getItem('subjects_data');
-        if (saved) {
-          try {
-            setSubjectsList(JSON.parse(saved));
-          } catch {
-            setSubjectsList(subjects);
-          }
-        } else {
-          setSubjectsList(subjects);
-        }
-      } else {
-        try {
-          const { data, error } = await supabase
-            .from('subjects')
-            .select('*')
-            .eq('user_id', user.id);
-          if (data && data.length > 0 && !error) {
-            setSubjectsList(data.map(row => ({
-              id: row.id,
-              name: row.name,
-              code: row.code,
-              color: row.color,
-              totalHours: row.total_hours,
-              completedHours: row.completed_hours,
-              progress: Math.round((row.completed_hours / (row.total_hours || 1)) * 100)
-            })));
-          } else {
-            setSubjectsList([]);
-          }
-        } catch {
-          setSubjectsList([]);
-        }
-      }
-      setLoading(false);
-    }
-    load();
-  }, [user, isDemo]);
-
-  const saveSubjects = async (updater: any[] | ((prev: any[]) => any[])) => {
-    const resolvedList = typeof updater === 'function' ? updater(subjectsList) : updater;
-    setSubjectsList(resolvedList);
-
-    if (isDemo) {
-      localStorage.setItem('subjects_data', JSON.stringify(resolvedList));
-    } else {
-      try {
-        console.log(`[Supabase subjects] Saving subjects for user ${user.id}...`);
-        const { error: delError } = await supabase.from('subjects').delete().eq('user_id', user.id);
-        if (delError) {
-          console.error('[Supabase subjects] Error deleting existing subjects:', delError);
-        }
-
-        const mapped = resolvedList.map(s => ({
-          user_id: user.id,
-          name: s.name,
-          code: s.code,
-          color: s.color,
-          total_hours: s.totalHours,
-          completed_hours: s.completedHours
-        }));
-        if (mapped.length > 0) {
-          const { error: insError } = await supabase.from('subjects').insert(mapped);
-          if (insError) {
-            console.error('[Supabase subjects] Error inserting subjects:', insError);
-          } else {
-            console.log(`[Supabase subjects] Successfully saved ${mapped.length} subjects.`);
-          }
-        }
-      } catch (err) {
-        console.error('[Supabase subjects] Catch error in saveSubjects:', err);
-      }
-    }
-  };
-
-  return { subjectsList, saveSubjects, loading };
 }

@@ -8,23 +8,23 @@
 
 :root,
 html.light {
-  /* Default: Warm Cream / Off-White Light Mode */
-  --bg-primary: #FAF8F5;
+  /* Priorify — soft pastel light mode */
+  --bg-primary: #F7F5FC;
   --bg-secondary: #FFFFFF;
   --bg-card: #FFFFFF;
-  --bg-card-hover: #F5F3EE;
-  --border-color: #EBE9E4;
-  --text-primary: #2C2C2E;
-  --text-secondary: #5C5C5E;
-  --text-muted: #A1A1A6;
-  --accent-blue: #2563EB;
-  --accent-teal: #0D9488;
-  --accent-coral: #EA580C;
-  --accent-amber: #D97706;
-  --accent-green: #16A34A;
-  --accent-purple: #7C3AED;
-  --accent-pink: #DB2777;
-  --focus-ring: rgba(37, 99, 235, 0.08);
+  --bg-card-hover: #F3F0FA;
+  --border-color: #E8E4F0;
+  --text-primary: #2D2A33;
+  --text-secondary: #5C5866;
+  --text-muted: #9B96A8;
+  --accent-blue: #6B8CFF;
+  --accent-teal: #5ECFB3;
+  --accent-coral: #FF9B7A;
+  --accent-amber: #F5B942;
+  --accent-green: #6BCB8B;
+  --accent-purple: #A78BFA;
+  --accent-pink: #F472B6;
+  --focus-ring: rgba(107, 140, 255, 0.12);
 }
 
 html.dark {

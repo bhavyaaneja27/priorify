@@ -1,17 +1,15 @@
 import { Link } from 'react-router-dom';
-import { Brain, ArrowRight, Sparkles, Target, BarChart3 } from 'lucide-react';
+import { Zap, ArrowRight, Sparkles, Target, BarChart3 } from 'lucide-react';
 
 export default function Welcome() {
   return (
     <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-20 left-10 w-72 h-72 bg-accent-blue/5 rounded-full blur-[80px]" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent-teal/5 rounded-full blur-[90px]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent-purple/3 rounded-full blur-[100px]" />
       </div>
 
-      {/* Floating particles */}
       <div className="absolute inset-0 pointer-events-none">
         {[...Array(6)].map((_, i) => (
           <div
@@ -28,40 +26,37 @@ export default function Welcome() {
       </div>
 
       <div className="relative z-10 text-center px-6 max-w-2xl mx-auto">
-        {/* Logo */}
         <div className="mb-6 flex justify-center">
           <div className="w-16 h-16 rounded-xl bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center animate-float">
-            <Brain className="w-8 h-8 text-accent-blue" />
+            <Zap className="w-8 h-8 text-accent-blue" />
           </div>
         </div>
 
         <h1 className="text-4xl md:text-5xl font-extrabold text-dark-100 mb-3 tracking-tight">
-          Study<span className="text-accent-blue">AI</span>
+          Prior<span className="text-accent-blue">ify</span>
         </h1>
         <p className="text-base md:text-lg text-dark-300 mb-3">
-          The AI-powered study planner for engineering students
+          Your AI-powered productivity companion
         </p>
         <p className="text-xs md:text-sm text-dark-400 mb-10 max-w-md mx-auto leading-relaxed">
-          Smart scheduling, attendance tracking, mood-based planning, and AI-generated study plans tailored to your pace.
+          Prioritize tasks, plan your day, avoid missed deadlines, and stay productive — whether you&apos;re a student, professional, or founder.
         </p>
 
-        {/* Feature pills */}
         <div className="flex flex-wrap justify-center gap-2.5 mb-10">
           <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-dark-900 border border-dark-600 text-xs text-dark-300">
             <Sparkles className="w-3.5 h-3.5 text-accent-blue" />
-            AI Planning
+            AI Action Plans
           </div>
           <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-dark-900 border border-dark-600 text-xs text-dark-300">
             <Target className="w-3.5 h-3.5 text-accent-teal" />
-            Focus Timer
+            Focus Sessions
           </div>
           <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-dark-900 border border-dark-600 text-xs text-dark-300">
             <BarChart3 className="w-3.5 h-3.5 text-accent-amber" />
-            Analytics
+            Smart Insights
           </div>
         </div>
 
-        {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-3.5 justify-center">
           <Link
             to="/signup"
@@ -79,7 +74,7 @@ export default function Welcome() {
         </div>
 
         <p className="mt-8 text-[11px] text-dark-400">
-          Trusted by 10,000+ engineering students worldwide
+          Built for students, professionals, freelancers, and founders
         </p>
       </div>
     </div>

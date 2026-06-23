@@ -91,15 +91,15 @@ export function validateAIPlannerForm(
   return { valid: true };
 }
 
-/** Timetable slot — subject and room non-empty, max 80 chars each */
+/** Calendar event — title and location non-empty, max 80 chars each */
 export function validateTimetableSlot(subject: string, room: string): ValidationResult {
-  const subj = subject.trim();
-  if (!subj) return { valid: false, error: 'Subject name is required.' };
-  if (subj.length > 80) return { valid: false, error: 'Subject name must not exceed 80 characters.' };
+  const title = subject.trim();
+  if (!title) return { valid: false, error: 'Event title is required.' };
+  if (title.length > 80) return { valid: false, error: 'Event title must not exceed 80 characters.' };
 
-  const rm = room.trim();
-  if (!rm) return { valid: false, error: 'Room / location is required.' };
-  if (rm.length > 80) return { valid: false, error: 'Room must not exceed 80 characters.' };
+  const location = room.trim();
+  if (!location) return { valid: false, error: 'Location is required.' };
+  if (location.length > 80) return { valid: false, error: 'Location must not exceed 80 characters.' };
 
   return { valid: true };
 }

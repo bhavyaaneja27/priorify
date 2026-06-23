@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Brain, Eye, EyeOff, Mail, Lock, ArrowRight, Chrome, Sparkles } from 'lucide-react';
+import { Zap, Eye, EyeOff, Mail, Lock, ArrowRight, Chrome, Sparkles } from 'lucide-react';
 import { validateEmail, validatePassword } from '../lib/validation';
 
 
@@ -56,10 +56,10 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-12 h-12 rounded-xl bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center mx-auto mb-4">
-            <Brain className="w-6 h-6 text-accent-blue" />
+            <Zap className="w-6 h-6 text-accent-blue" />
           </div>
           <h1 className="text-2xl font-bold text-dark-100 mb-1 tracking-tight">Welcome back</h1>
-          <p className="text-sm text-dark-300">Sign in to continue your study journey</p>
+          <p className="text-sm text-dark-300">Sign in to continue with Priorify</p>
         </div>
 
         <div className="glass-card p-8 space-y-4">
@@ -97,7 +97,7 @@ export default function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@university.edu"
+                  placeholder="you@example.com"
                   className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none transition-all"
                   required
                 />

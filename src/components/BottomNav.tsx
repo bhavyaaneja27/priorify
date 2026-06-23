@@ -1,16 +1,14 @@
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, CalendarDays, BarChart3, Sparkles, Smile,
-  Timer, Settings
+  LayoutDashboard, ListTodo, CalendarDays, Sparkles, Timer, Settings
 } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { path: '/timetable', label: 'Timetable', icon: CalendarDays },
-  { path: '/attendance', label: 'Attend', icon: BarChart3 },
-  { path: '/ai-planner', label: 'AI', icon: Sparkles },
-  { path: '/mood', label: 'Mood', icon: Smile },
-  { path: '/pomodoro', label: 'Focus', icon: Timer },
+  { path: '/tasks', label: 'Tasks', icon: ListTodo },
+  { path: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { path: '/action-planner', label: 'Plan', icon: Sparkles },
+  { path: '/focus', label: 'Focus', icon: Timer },
   { path: '/settings', label: 'More', icon: Settings },
 ];
 

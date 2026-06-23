@@ -159,8 +159,8 @@ export default function AIPlanner() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-dark-100">AI Study Planner</h1>
-          <p className="text-sm text-dark-300 mt-1">Generate personalized study schedules with AI</p>
+          <h1 className="text-2xl font-bold text-dark-100">AI Action Planner</h1>
+          <p className="text-sm text-dark-300 mt-1">Generate actionable plans and break goals into steps</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-dark-950 rounded-xl p-1 border border-dark-600">
@@ -196,7 +196,7 @@ export default function AIPlanner() {
           >
             <h3 className="text-lg font-semibold text-dark-100 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-accent-blue" />
-              Generate AI Study Plan
+              Generate Action Plan
               {user && !user.isDemo && (
                 <span className="ml-auto text-xs text-dark-400">
                   {getRemainingGenerations(user.id)} / 5 generations left today
@@ -205,7 +205,7 @@ export default function AIPlanner() {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">Subject</label>
+                <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">Goal / Project</label>
                 <div className="relative">
                   <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
                   <input
@@ -248,7 +248,7 @@ export default function AIPlanner() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">Exam Date</label>
+                <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wider">Deadline</label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
                   <input
@@ -310,7 +310,7 @@ export default function AIPlanner() {
                           {plan.difficulty}
                         </span>
                       </div>
-                      <p className="text-xs text-dark-300">{plan.topic} • {plan.daysLeft} days until exam</p>
+                      <p className="text-xs text-dark-300">{plan.topic} • {plan.daysLeft} days until deadline</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -411,7 +411,7 @@ export default function AIPlanner() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-dark-600">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-dark-400 uppercase tracking-wider">Subject</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-dark-400 uppercase tracking-wider">Goal</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-dark-400 uppercase tracking-wider">Topic</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-dark-400 uppercase tracking-wider">Difficulty</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-dark-400 uppercase tracking-wider">Days Left</th>

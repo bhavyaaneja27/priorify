@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarDays, Clock, MapPin, Plus, X, GripVertical } from 'lucide-react';
+import { useTimetable } from '../hooks/usePersistence';
+import { validateTimetableSlot } from '../lib/validation';
 
 const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -94,11 +96,7 @@ function getPositionedSlots(slots: Slot[]): PositionedSlot[] {
   return positioned;
 }
 
-import { useTimetable } from '../hooks/usePersistence';
-import { validateTimetableSlot } from '../lib/validation';
-
-
-export default function Timetable() {
+export default function Calendar() {
   const { schedule, saveSchedule: setSchedule, loading } = useTimetable();
   const [showAdd, setShowAdd] = useState(false);
   const [newSlot, setNewSlot] = useState({ day: 'Monday', time: '09:00', subject: '', room: '', color: '#5b8def' });
@@ -106,12 +104,11 @@ export default function Timetable() {
   const [dragOverCell, setDragOverCell] = useState<{ day: string; time: string } | null>(null);
   const [slotError, setSlotError] = useState<string | null>(null);
 
-
   if (loading) {
     return (
       <div className="h-96 flex flex-col items-center justify-center gap-3">
         <div className="w-8 h-8 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-dark-400">Loading schedule...</p>
+        <p className="text-xs text-dark-400">Loading calendar...</p>
       </div>
     );
   }
@@ -132,7 +129,6 @@ export default function Timetable() {
     setSlotError(null);
     setNewSlot({ day: 'Monday', time: '09:00', subject: '', room: '', color: '#5b8def' });
   };
-
 
   const handleDelete = (day: string, time: string) => {
     setSchedule(prev => prev.map(d => d.day === day ? { ...d, slots: d.slots.filter((s: Slot) => s.time !== time) } : d));
@@ -189,15 +185,15 @@ export default function Timetable() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-dark-100">Weekly Timetable</h1>
-          <p className="text-sm text-dark-300 mt-1">Drag and drop to manage your schedule</p>
+          <h1 className="text-2xl font-bold text-dark-100">Calendar</h1>
+          <p className="text-sm text-dark-300 mt-1">Manage your local events and commitments</p>
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent-blue text-white font-medium text-sm transition-all shadow-sm hover:bg-accent-blue/90"
         >
           <Plus className="w-4 h-4" />
-          Add Class
+          Add Event
         </button>
       </div>
 
@@ -210,8 +206,8 @@ export default function Timetable() {
             <select value={newSlot.time} onChange={e => setNewSlot({ ...newSlot, time: e.target.value })} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none">
               {timeSlots.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
-            <input value={newSlot.subject} onChange={e => { setNewSlot({ ...newSlot, subject: e.target.value }); setSlotError(null); }} placeholder="Subject" maxLength={80} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none" />
-            <input value={newSlot.room} onChange={e => { setNewSlot({ ...newSlot, room: e.target.value }); setSlotError(null); }} placeholder="Room" maxLength={80} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none" />
+            <input value={newSlot.subject} onChange={e => { setNewSlot({ ...newSlot, subject: e.target.value }); setSlotError(null); }} placeholder="Event title" maxLength={80} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none" />
+            <input value={newSlot.room} onChange={e => { setNewSlot({ ...newSlot, room: e.target.value }); setSlotError(null); }} placeholder="Location" maxLength={80} className="px-3 py-2.5 rounded-xl bg-dark-900 border border-dark-600 text-dark-100 text-sm focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 outline-none" />
             <div className="flex gap-2">
               <button onClick={handleAdd} className="flex-1 py-2.5 rounded-xl bg-accent-blue text-white font-medium text-sm hover:bg-accent-blue/90">Add</button>
               <button onClick={() => { setShowAdd(false); setSlotError(null); }} className="px-3 py-2.5 rounded-xl bg-dark-800 border border-dark-600 text-dark-300 hover:text-dark-100"><X className="w-4 h-4" /></button>
@@ -225,8 +221,6 @@ export default function Timetable() {
         </motion.div>
       )}
 
-
-      {/* Mobile view */}
       <div className="lg:hidden space-y-4">
         {schedule.map((day) => (
           <div key={day.day} className="glass-card p-4">
@@ -236,7 +230,7 @@ export default function Timetable() {
             </h3>
             <div className="space-y-2">
               {day.slots.length === 0 && (
-                <p className="text-sm text-dark-400 py-2">No classes scheduled</p>
+                <p className="text-sm text-dark-400 py-2">No events scheduled</p>
               )}
               {day.slots.sort((a: Slot, b: Slot) => a.time.localeCompare(b.time)).map((slot: Slot) => (
                 <div key={slot.time} className="flex items-center gap-3 p-3 rounded-xl bg-dark-900 border border-dark-600 border-l-4" style={{ borderLeftColor: slot.color }}>
@@ -255,7 +249,6 @@ export default function Timetable() {
         ))}
       </div>
 
-      {/* Desktop grid view */}
       <div className="hidden lg:block glass-card overflow-hidden">
         <div className="grid grid-cols-7 border-b border-dark-600">
           <div className="p-3 text-xs font-semibold text-dark-400 uppercase tracking-wider border-r border-dark-600">Time</div>
@@ -274,7 +267,6 @@ export default function Timetable() {
             const positionedSlots = getPositionedSlots(daySlots);
             return (
               <div key={day} className="absolute border-r border-dark-600/50" style={{ left: `${(100 / 7) + dayIdx * (100 / 7)}%`, width: `${100 / 7}%`, height: '100%' }}>
-                {/* Hourly Drop Targets */}
                 {timeSlots.map((time, i) => {
                   const isHovered = dragOverCell?.day === day && dragOverCell?.time === time;
                   return (
@@ -293,7 +285,6 @@ export default function Timetable() {
                   );
                 })}
 
-                {/* Class cards */}
                 {positionedSlots.map((slot) => (
                   <div
                     key={slot.time}

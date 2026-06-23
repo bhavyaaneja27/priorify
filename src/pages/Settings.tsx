@@ -30,7 +30,7 @@ export default function Settings() {
   const [notifications, setNotifications] = useState({
     classReminders: true,
     studyReminders: true,
-    attendanceAlerts: true,
+    deadlineAlerts: true,
     achievements: true,
     email: false,
     push: true,
@@ -259,8 +259,8 @@ export default function Settings() {
               <div className="space-y-4">
                 {[
                   { key: 'classReminders' as const, label: 'Class Reminders', desc: 'Get notified before classes start', icon: Bell },
-                  { key: 'studyReminders' as const, label: 'Study Reminders', desc: 'Daily study plan notifications', icon: Clock },
-                  { key: 'attendanceAlerts' as const, label: 'Attendance Alerts', desc: 'Warn when attendance drops below 75%', icon: Shield },
+                  { key: 'studyReminders' as const, label: 'Daily Plan Reminders', desc: 'Get notified about your daily action plan', icon: Clock },
+                  { key: 'deadlineAlerts' as const, label: 'Deadline Alerts', desc: 'Warn when deadlines are approaching', icon: Shield },
                   { key: 'achievements' as const, label: 'Achievement Notifications', desc: 'Celebrate when you unlock badges', icon: Check },
                 ].map((item) => (
                   <div key={item.key} className="flex items-center justify-between p-4 rounded-xl bg-dark-950 border border-dark-600/30">
@@ -401,7 +401,7 @@ export default function Settings() {
                     <span className="text-sm font-medium text-dark-100">Data Export</span>
                     <ChevronRight className="w-4 h-4 text-dark-400" />
                   </div>
-                  <p className="text-xs text-dark-400">Download all your study data and progress</p>
+                  <p className="text-xs text-dark-400">Download all your Priorify data and progress</p>
                 </div>
 
                 <div className="p-4 rounded-xl bg-accent-coral/5 border border-accent-coral/25">
@@ -430,7 +430,7 @@ export default function Settings() {
             </div>
             <h3 className="text-lg font-semibold text-dark-100 text-center mb-2">Sign Out?</h3>
             <p className="text-sm text-dark-300 text-center mb-6">
-              Are you sure you want to sign out? You'll need to sign in again to access your study data.
+              Are you sure you want to sign out? You'll need to sign in again to access your data.
             </p>
             <div className="flex gap-3">
               <button

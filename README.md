@@ -1,133 +1,52 @@
-# StudyAI - AI Study Planner
+# Priorify — AI Productivity Companion
 
-A full-stack student productivity platform built with React, TypeScript, Supabase, and Netlify.
+Priorify helps students, professionals, freelancers, and founders prioritize tasks, plan their day, avoid missed deadlines, and stay productive.
 
-## 🚀 Live Demo
+> **Note:** Priorify is a separate product from StudyAI. It uses its own Supabase project (`priorify_schema.sql` / `priorify_rls.sql`). Legacy StudyAI SQL files in this repo are archived references only.
 
-https://studyai-by-bhavya.netlify.app
+## Features (MVP in progress)
 
-## ✨ Features
+- **Tasks** — Smart task management with deadlines, priorities, and categories *(Phase 1)*
+- **AI Action Planner** — Generate actionable plans and break goals into steps
+- **Smart Daily Planner** — AI-generated daily schedule *(upcoming)*
+- **Calendar** — Local calendar events *(Google sync coming later)*
+- **Productivity Check** — Daily energy reflection with emoji picker
+- **Focus Sessions** — Timed deep-work sessions
+- **Insights** — XP, streaks, achievements, and productivity score
+- **Gamification** — XP, levels, streaks, and achievements
 
-### 📚 AI Study Planner
-- Generate personalized study schedules
-- Organize subjects and topics
-- Track study progress
+## Tech Stack
 
-### 📅 Timetable Management
-- Create and manage class schedules
-- View daily and weekly timetable
-
-### ✅ Attendance Tracker
-- Add custom subjects
-- Track attended and missed classes
-- Monitor attendance percentage
-
-### 🎯 Bunk Budget Calculator
-- Calculate safe bunk limits
-- Predict attendance impact
-- Identify attendance risk subjects
-
-### 😊 Mood Tracking
-- Log daily mood
-- Monitor mood trends
-
-### ⏱ Focus Timer
-- Pomodoro timer for productive study sessions
-- Focus tracking
-
-### 🔐 Authentication
-- Email login/signup
-- Google Sign-In
-- Secure user accounts
-
-### ☁️ Cloud Database
-- Supabase integration
-- Persistent data storage
-- Real-time updates
-
----
-
-## 🛠 Tech Stack
-
-### Frontend
-- React
-- TypeScript
-- Vite
+- React + TypeScript + Vite
 - Tailwind CSS
-
-### Backend & Database
-- Supabase
-- PostgreSQL
-
-### Deployment
+- Supabase (auth + PostgreSQL) — *connect in a future phase*
+- Google Gemini (AI plans)
 - Netlify
 
----
-
-## 📸 Screenshots
-
-### Dashboard
-<img width="959" height="408" alt="image" src="https://github.com/user-attachments/assets/53d387da-8cef-4b72-9169-73b92ed020d1" />
-
-### Attendance Tracker
-<img width="956" height="416" alt="image" src="https://github.com/user-attachments/assets/1f78f637-349f-4808-8616-fa0f19c906ff" />
-
-
-### AI Study Planner
-<img width="956" height="405" alt="image" src="https://github.com/user-attachments/assets/5853f12c-ca71-4af3-9ba5-b857d084d71e" />
-
-
-### Timetable
-<img width="953" height="402" alt="image" src="https://github.com/user-attachments/assets/66ea38e7-5045-4a4f-a105-2b9516bee121" />
-
-## ⚙️ Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/bhavyaaneja27/study-planner-project.git
-```
-
-Install dependencies:
+## Getting Started
 
 ```bash
 npm install
-```
-
-Run locally:
-
-```bash
 npm run dev
 ```
 
-Build project:
+Copy `.env.example` to `.env` and add your Gemini API key. Supabase credentials will be added when the Priorify database project is connected.
 
 ```bash
 npm run build
+npm run typecheck
+npm run lint
 ```
 
----
+## Database Setup (future)
 
-## 🌟 Future Improvements
+When ready, create a **new** Supabase project and run:
 
-- Attendance reminders
-- Exam countdown system
-- AI-powered study recommendations
-- Mobile app version
-- Analytics dashboard
+1. `priorify_schema.sql`
+2. `priorify_rls.sql`
 
----
+Do **not** run these against the StudyAI Supabase project.
 
-## 👩‍💻 Author
+## License
 
-**Bhavya Aneja**
-
-GitHub: https://github.com/bhavyaaneja27
-
-Live Project: https://studyai-by-bhavya.netlify.app
-
----
-
-## 📄 License
-
-This project is created for learning, portfolio, and educational purposes.
+Built for learning, portfolio, and educational purposes.
