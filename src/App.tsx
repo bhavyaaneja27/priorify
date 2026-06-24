@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import Welcome from './pages/Welcome';
 import Layout from './components/Layout';
 import { ReminderEngine } from './hooks/useReminders';
+import { TourProvider } from './contexts/TourContext';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -68,8 +69,9 @@ function App() {
   return (
     <>
       <ReminderEngine />
-      <Routes>
-        <Route path="/" element={<Navigate to="/welcome" replace />} />
+      <TourProvider>
+        <Routes>
+          <Route path="/" element={<Navigate to="/welcome" replace />} />
         <Route path="/welcome" element={<GuestRoute><Welcome /></GuestRoute>} />
 
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
@@ -94,7 +96,8 @@ function App() {
         <Route path="/pomodoro" element={<Navigate to="/focus" replace />} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+        </Routes>
+      </TourProvider>
     </>
   );
 }

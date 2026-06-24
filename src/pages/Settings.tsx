@@ -8,6 +8,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../hooks/usePersistence';
 import { validateProfileName, validateTextField } from '../lib/validation';
+import { useTour } from '../contexts/TourContext';
+import { Sparkles } from 'lucide-react';
 
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -25,6 +27,7 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 export default function Settings() {
   const { user, signOut } = useAuth();
+  const { openTour } = useTour();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'theme' | 'account'>('profile');
   const [notifications, setNotifications] = useState({
@@ -371,6 +374,20 @@ export default function Settings() {
                     <ChevronRight className="w-4 h-4 text-dark-400" />
                   </div>
                   <p className="text-xs text-dark-400">Update your password for better security</p>
+                </div>
+
+                <div 
+                  className="p-4 rounded-xl bg-dark-950 border border-dark-600/30 hover:border-dark-600 transition-all cursor-pointer"
+                  onClick={openTour}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-accent-blue" />
+                      <span className="text-sm font-medium text-dark-100">Replay Product Tour</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-dark-400" />
+                  </div>
+                  <p className="text-xs text-dark-400">Restart the onboarding guide to learn about Priorify</p>
                 </div>
 
                 <div className="p-4 rounded-xl bg-dark-950 border border-dark-600/30">

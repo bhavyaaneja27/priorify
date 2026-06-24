@@ -4,6 +4,7 @@ import {
   Timer, Settings, LogOut, BarChart3, Zap, Brain
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTour } from '../contexts/TourContext';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -19,6 +20,7 @@ const navItems = [
 
 export default function Sidebar() {
   const { signOut } = useAuth();
+  const { openTour } = useTour();
 
   return (
     <aside className="w-64 h-screen fixed left-0 top-0 bg-dark-900 border-r border-dark-600 flex flex-col z-50">
@@ -50,7 +52,14 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-dark-600">
+      <div className="p-4 border-t border-dark-600 space-y-2">
+        <button
+          onClick={openTour}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-dark-300 hover:text-accent-blue hover:bg-accent-blue/10 border border-transparent transition-all duration-200"
+        >
+          <Sparkles className="w-[18px] h-[18px]" strokeWidth={2} />
+          Take Product Tour
+        </button>
         <button
           onClick={signOut}
           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-dark-300 hover:text-accent-coral hover:bg-accent-coral/10 border border-transparent transition-all duration-200"
