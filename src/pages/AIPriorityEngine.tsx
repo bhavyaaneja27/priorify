@@ -246,8 +246,13 @@ function DailyPlannerTab({ tasks, events, productivityData, onPlanGenerated }: {
         suggestedPlan: { ...suggestionData.suggestedPlan, id: generateUUID(), date: todayStr },
         changes: suggestionData.changes || []
       });
-    } catch (err) {
-      alert('Failed to generate reschedule suggestion.');
+    } catch (err: any) {
+      const msg = err?.message?.startsWith('GEMINI_503')
+        ? 'Gemini is currently under heavy load. Please try again later.'
+        : err?.message?.startsWith('GEMINI_429')
+        ? 'Gemini quota exceeded. Please try again later.'
+        : 'Failed to generate reschedule suggestion.';
+      alert(msg);
     }
     setCheckingReschedule(false);
   };

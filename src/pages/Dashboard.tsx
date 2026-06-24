@@ -94,8 +94,8 @@ export default function Dashboard() {
     const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return {
       day: weekdayNames[d.getDay()],
-      stress: match ? match.stress : 5.0,
-      focus: match ? match.focus : 5.0
+      stress: match ? match.stress : 0,
+      focus: match ? match.focus : 0
     };
   });
 
@@ -128,9 +128,10 @@ export default function Dashboard() {
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .slice(0, 4);
 
-  const productivityScore = Math.min(100, Math.round(
+  const hasData = (profile.totalHours || 0) > 0 || (profile.streak || 0) > 0 || plans.length > 0;
+  const productivityScore = hasData ? Math.min(100, Math.round(
     (profile.streak || 0) * 5 + Math.min(40, (profile.totalHours || 0) / 10) + (plans.length > 0 ? 15 : 0) + 20
-  ));
+  )) : null;
 
   const achievements = [
     { id: '1', name: 'Productivity Streak', description: '7 days in a row', icon: 'flame', unlocked: (profile.streak || 0) >= 7, xp: 100 },
@@ -172,12 +173,16 @@ export default function Dashboard() {
               <svg width="128" height="128" className="-rotate-90">
                 <circle cx="64" cy="64" r="56" stroke="var(--border-color)" strokeWidth="8" fill="none" />
                 <circle cx="64" cy="64" r="56" stroke="var(--accent-blue)" strokeWidth="8" fill="none"
-                  strokeLinecap="round" strokeDasharray={351.86} strokeDashoffset={351.86 * (1 - productivityScore / 100)}
+                  strokeLinecap="round" strokeDasharray={351.86} strokeDashoffset={351.86 * (1 - (productivityScore || 0) / 100)}
                   style={{ transition: 'stroke-dashoffset 1s ease-out' }}
                 />
               </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-dark-100">{productivityScore}%</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
+                {productivityScore !== null ? (
+                  <span className="text-2xl font-bold text-dark-100">{productivityScore}%</span>
+                ) : (
+                  <span className="text-xs font-semibold text-dark-400">No data yet</span>
+                )}
               </div>
             </div>
             <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
@@ -250,7 +255,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <SectionTitle icon={TrendingUp} title="Weekly Focus" subtitle="Hours per day this week" />
-          <div className="h-48">
+          <div className="h-48 relative">
+            {pomoHistory.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center bg-dark-900/50 backdrop-blur-[2px] z-10 rounded-xl border border-dark-600 border-dashed">
+                <p className="text-xs text-dark-400 px-4 text-center">Complete focus sessions to see your weekly trend.</p>
+              </div>
+            )}
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyFocus}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
@@ -268,7 +278,12 @@ export default function Dashboard() {
 
         <Card>
           <SectionTitle icon={TrendingUp} title="Stress & Focus" subtitle="Daily tracking" />
-          <div className="h-48">
+          <div className="h-48 relative">
+            {moodHistory.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center bg-dark-900/50 backdrop-blur-[2px] z-10 rounded-xl border border-dark-600 border-dashed">
+                <p className="text-xs text-dark-400 px-4 text-center">Log your energy to unlock stress vs. focus insights.</p>
+              </div>
+            )}
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stressData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />

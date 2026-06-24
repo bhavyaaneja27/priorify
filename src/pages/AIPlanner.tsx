@@ -83,14 +83,13 @@ export default function AIPlanner() {
       return;
     }
 
-    // AI rate limiting (only for authenticated non-demo users)
+    // AI rate limiting — applied to all users (including demo) to prevent
+    // runaway quota consumption. Demo users get their own localStorage slot.
     const userId = user?.id || 'demo';
-    if (user && !user.isDemo) {
-      const rateCheck = checkAIRateLimit(userId, formData.subject, formData.topic, formData.difficulty, formData.examDate);
-      if (!rateCheck.allowed) {
-        setAiError(rateCheck.reason || 'Rate limit exceeded. Please try again later.');
-        return;
-      }
+    const rateCheck = checkAIRateLimit(userId, formData.subject, formData.topic, formData.difficulty, formData.examDate);
+    if (!rateCheck.allowed) {
+      setAiError(rateCheck.reason || 'Rate limit exceeded. Please try again later.');
+      return;
     }
 
     setGenerating(true);
@@ -140,10 +139,8 @@ export default function AIPlanner() {
     if (result?.error) {
       setAiError(result.error);
     } else {
-      // Record successful generation for rate limiting
-      if (user && !user.isDemo) {
-        recordAIRequest(user.id, formData.subject, formData.topic, formData.difficulty, formData.examDate);
-      }
+      // Record successful generation for rate limiting (all users)
+      recordAIRequest(userId, formData.subject, formData.topic, formData.difficulty, formData.examDate);
     }
     setGenerating(false);
     if (!result?.error) {

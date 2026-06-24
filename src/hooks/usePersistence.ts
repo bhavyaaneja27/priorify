@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { calendarSlots, aiPlans, pomodoroHistory } from '../data/dummyData';
+
 
 const groupSlotsByDay = (flatSlots: any[]) => {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -33,7 +33,7 @@ export const generateUUID = () => {
 // 1. Timetable Hook
 export function useTimetable() {
   const { user } = useAuth();
-  const [schedule, setSchedule] = useState<any[]>(calendarSlots);
+  const [schedule, setSchedule] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isDemo = !user || user.isDemo;
@@ -48,7 +48,7 @@ export function useTimetable() {
             setSchedule(JSON.parse(saved));
           } catch {}
         } else {
-          setSchedule(calendarSlots);
+          setSchedule([]);
         }
       } else {
         try {
@@ -114,7 +114,7 @@ export function useTimetable() {
 // 2. AI Plans Hook
 export function useAIPlans() {
   const { user } = useAuth();
-  const [plans, setPlans] = useState<any[]>(aiPlans);
+  const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,10 +130,10 @@ export function useAIPlans() {
           try {
             setPlans(JSON.parse(saved));
           } catch {
-            setPlans(aiPlans);
+            setPlans([]);
           }
         } else {
-          setPlans(aiPlans);
+          setPlans([]);
         }
       } else {
         try {
@@ -341,14 +341,7 @@ export function useMoodHistory() {
             setMoodHistory([]);
           }
         } else {
-          // default dummy data translated to fit
-          const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-          const dummy = days.map((day, idx) => ({
-            day,
-            stress: [3.2, 4.5, 2.8, 5.0, 3.5, 1.5, 2.0][idx],
-            focus: [7.8, 6.5, 8.2, 6.0, 7.5, 9.0, 8.5][idx],
-          }));
-          setMoodHistory(dummy);
+          setMoodHistory([]);
         }
       } else {
         try {
@@ -384,7 +377,7 @@ export function useMoodHistory() {
 // 6. Pomodoro History Hook
 export function usePomodoroHistory() {
   const { user } = useAuth();
-  const [history, setHistory] = useState<any[]>(pomodoroHistory);
+  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isDemo = !user || user.isDemo;
@@ -399,7 +392,7 @@ export function usePomodoroHistory() {
             setHistory(JSON.parse(saved));
           } catch {}
         } else {
-          setHistory(pomodoroHistory);
+          setHistory([]);
         }
       } else {
         try {
@@ -501,15 +494,15 @@ export function useUserProfile() {
           }
         } else {
           setProfile({
-            name: 'Alex Johnson',
-            email: 'alex.johnson@example.com',
-            avatar: 'AJ',
-            profession: 'Product Designer',
-            organization: 'Freelancer',
-            totalXP: 1280,
-            level: 12,
-            streak: 7,
-            totalHours: 342,
+            name: 'Guest',
+            email: '',
+            avatar: 'G',
+            profession: '',
+            organization: '',
+            totalXP: 0,
+            level: 1,
+            streak: 0,
+            totalHours: 0,
           });
         }
       } else {
@@ -636,59 +629,7 @@ export function useTasks() {
             setTasks([]);
           }
         } else {
-          // Seed with a handful of sample tasks so the UI isn't empty on first visit
-          const now = new Date().toISOString();
-          const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-          const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
-          const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-          const seed: Task[] = [
-            {
-              id: generateUUID(),
-              title: 'Review Q3 project proposal',
-              description: 'Go through the deck and leave comments for the team before the Thursday meeting.',
-              category: 'Work',
-              priority: 'high',
-              dueDate: tomorrow,
-              status: 'in-progress',
-              createdAt: now,
-              updatedAt: now,
-            },
-            {
-              id: generateUUID(),
-              title: 'Set up weekly goal tracker',
-              description: 'Create a simple spreadsheet to log daily outputs.',
-              category: 'Personal',
-              priority: 'medium',
-              dueDate: nextWeek,
-              status: 'pending',
-              createdAt: now,
-              updatedAt: now,
-            },
-            {
-              id: generateUUID(),
-              title: 'Submit expense report',
-              description: 'Upload April receipts to the HR portal.',
-              category: 'Admin',
-              priority: 'critical',
-              dueDate: yesterday,
-              status: 'pending',
-              createdAt: now,
-              updatedAt: now,
-            },
-            {
-              id: generateUUID(),
-              title: 'Read "Deep Work" – Chapter 3',
-              description: '',
-              category: 'Learning',
-              priority: 'low',
-              dueDate: nextWeek,
-              status: 'completed',
-              createdAt: now,
-              updatedAt: now,
-            },
-          ];
-          setTasks(seed);
-          localStorage.setItem(TASKS_KEY, JSON.stringify(seed));
+          setTasks([]);
         }
       } else {
         try {
@@ -837,74 +778,7 @@ export interface CalendarEvent {
 
 const CAL_KEY = 'priorify_calendar_events';
 
-function buildSeedEvents(): CalendarEvent[] {
-  const now = new Date().toISOString();
-  const today = new Date();
-  const fmt = (d: Date) => d.toISOString().split('T')[0];
 
-  const d = (offset: number) => {
-    const dt = new Date(today);
-    dt.setDate(dt.getDate() + offset);
-    return fmt(dt);
-  };
-
-  return [
-    {
-      id: generateUUID(), title: 'Team Standup', description: 'Daily sync with the team',
-      category: 'work', color: CATEGORY_COLORS.work,
-      startDate: d(0), startTime: '09:00', endDate: d(0), endTime: '09:30',
-      location: 'Zoom', allDay: false, source: 'local', createdAt: now, updatedAt: now,
-    },
-    {
-      id: generateUUID(), title: 'Deep Work Block', description: 'No meetings, focused coding',
-      category: 'work', color: CATEGORY_COLORS.work,
-      startDate: d(0), startTime: '10:00', endDate: d(0), endTime: '12:00',
-      location: 'Home', allDay: false, source: 'local', createdAt: now, updatedAt: now,
-    },
-    {
-      id: generateUUID(), title: 'Gym Session', description: '',
-      category: 'health', color: CATEGORY_COLORS.health,
-      startDate: d(0), startTime: '17:30', endDate: d(0), endTime: '18:30',
-      location: 'Fitness Club', allDay: false, source: 'local', createdAt: now, updatedAt: now,
-    },
-    {
-      id: generateUUID(), title: 'Client Review', description: 'Present Q3 proposal',
-      category: 'work', color: CATEGORY_COLORS.work,
-      startDate: d(1), startTime: '11:00', endDate: d(1), endTime: '12:00',
-      location: 'Conference Room A', allDay: false, source: 'local', createdAt: now, updatedAt: now,
-    },
-    {
-      id: generateUUID(), title: 'Read: Atomic Habits', description: 'Chapter 5–7',
-      category: 'personal', color: CATEGORY_COLORS.personal,
-      startDate: d(1), startTime: '20:00', endDate: d(1), endTime: '21:00',
-      location: '', allDay: false, source: 'local', createdAt: now, updatedAt: now,
-    },
-    {
-      id: generateUUID(), title: 'Sprint Planning', description: 'Plan next two-week sprint',
-      category: 'work', color: CATEGORY_COLORS.work,
-      startDate: d(2), startTime: '09:00', endDate: d(2), endTime: '10:30',
-      location: 'Conference Room B', allDay: false, source: 'local', createdAt: now, updatedAt: now,
-    },
-    {
-      id: generateUUID(), title: 'Online Course: React Advanced', description: '',
-      category: 'study', color: CATEGORY_COLORS.study,
-      startDate: d(2), startTime: '14:00', endDate: d(2), endTime: '16:00',
-      location: '', allDay: false, source: 'local', createdAt: now, updatedAt: now,
-    },
-    {
-      id: generateUUID(), title: "Doctor's Appointment", description: 'Annual checkup',
-      category: 'health', color: CATEGORY_COLORS.health,
-      startDate: d(3), startTime: '10:30', endDate: d(3), endTime: '11:30',
-      location: 'City Medical Center', allDay: false, source: 'local', createdAt: now, updatedAt: now,
-    },
-    {
-      id: generateUUID(), title: 'Weekend Trip', description: 'Mountain hiking',
-      category: 'personal', color: CATEGORY_COLORS.personal,
-      startDate: d(5), startTime: '', endDate: d(6), endTime: '',
-      location: 'Blue Ridge Mountains', allDay: true, source: 'local', createdAt: now, updatedAt: now,
-    },
-  ];
-}
 
 export function useCalendarEvents() {
   const { user } = useAuth();
@@ -923,9 +797,7 @@ export function useCalendarEvents() {
         if (saved) {
           try { setEvents(JSON.parse(saved)); } catch { setEvents([]); }
         } else {
-          const seed = buildSeedEvents();
-          setEvents(seed);
-          localStorage.setItem(storageKey, JSON.stringify(seed));
+          setEvents([]);
         }
       } else {
         try {

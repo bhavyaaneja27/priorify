@@ -44,12 +44,13 @@ export default function Insights() {
     };
   });
 
-  const productivityScore = Math.min(100, Math.round(
+  const hasData = (profile.totalHours || 0) > 0 || (profile.streak || 0) > 0 || plans.length > 0;
+  const productivityScore = hasData ? Math.min(100, Math.round(
     (profile.streak || 0) * 5 +
     Math.min(40, (profile.totalHours || 0) / 10) +
     (plans.length > 0 ? 15 : 0) +
     20
-  ));
+  )) : null;
 
   const achievements = [
     { id: '1', name: 'Productivity Streak', description: '7 days in a row', icon: 'flame', unlocked: (profile.streak || 0) >= 7, xp: 100 },
@@ -100,7 +101,9 @@ export default function Insights() {
             <Target className="w-5 h-5 text-accent-purple" />
           </div>
           <div>
-            <p className="text-xl font-bold text-dark-100">{productivityScore}%</p>
+            <p className={`font-bold text-dark-100 ${productivityScore !== null ? 'text-xl' : 'text-sm'}`}>
+              {productivityScore !== null ? `${productivityScore}%` : 'No data yet'}
+            </p>
             <p className="text-xs text-dark-300">Productivity Score</p>
           </div>
         </Card>
@@ -116,7 +119,12 @@ export default function Insights() {
             <p className="text-xs text-dark-400">Hours per day this week</p>
           </div>
         </div>
-        <div className="h-48">
+        <div className="h-48 relative">
+          {focusHistory.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-dark-900/50 backdrop-blur-[2px] z-10 rounded-xl border border-dark-600 border-dashed">
+              <p className="text-xs text-dark-400 px-4 text-center">Complete focus sessions to see your weekly trend.</p>
+            </div>
+          )}
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weeklyFocus}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />

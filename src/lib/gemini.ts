@@ -1,10 +1,6 @@
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+import { callGemini } from './aiEngine';
 
 export async function generateStudyPlan(subject: string, topic: string, difficulty: string, daysLeft: number) {
-  if (!GEMINI_API_KEY) {
-    throw new Error('Gemini API key is not configured in .env');
-  }
-
   const planDays = Math.min(5, daysLeft);
   
   const prompt = `Generate a personalized day-by-day study plan for subject "${subject}", topic "${topic}".
@@ -24,55 +20,18 @@ You MUST respond with a valid JSON object matching the following structure:
 }
 Return ONLY a valid JSON object. Do not include markdown code block tags (\`\`\`json or \`\`\`) in your response. Just raw JSON text.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-  
-  console.log(`[Gemini API] Requesting study plan for ${subject} (${topic}) for ${planDays} days using gemini-2.5-flash...`);
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            {
-              text: prompt
-            }
-          ]
-        }
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json'
-      }
-    })
-  });
-
-  console.log(`[Gemini API] Response status: ${response.status}`);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[Gemini API] Error response:`, errorText);
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  const result = await response.json();
-  const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) {
-    console.error('[Gemini API] Error: No content returned in result candidates');
-    throw new Error('No content returned from Gemini');
-  }
+  console.log(`[Gemini API] Requesting study plan for ${subject} (${topic}) for ${planDays} days via callGemini...`);
 
   try {
+    const rawText = await callGemini(prompt);
     const parsed = JSON.parse(rawText.trim());
     if (parsed && Array.isArray(parsed.schedule)) {
       console.log('[Gemini API] Study plan generated and parsed successfully.', parsed.schedule);
       return parsed.schedule;
     }
     throw new Error('Response is missing schedule array');
-  } catch (err) {
-    console.error('[Gemini API] Parsing failed for response text:', rawText, err);
-    throw new Error('Failed to parse study plan JSON structure');
+  } catch (err: any) {
+    console.error('[Gemini API] Parsing failed or API error:', err);
+    throw err;
   }
 }

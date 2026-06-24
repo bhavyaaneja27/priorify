@@ -207,39 +207,55 @@ async function processGeminiQueue() {
 
 async function executeGeminiRequest(prompt: string, maxRetries: number): Promise<string> {
   if (!GEMINI_API_KEY) throw new Error('No Gemini API key');
-  
+
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: { responseMimeType: 'application/json' },
   };
 
+  let totalRequests = 0;
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    totalRequests++;
+    console.log(`[Gemini] Attempt ${attempt + 1}/${maxRetries + 1} — total requests this action: ${totalRequests}`);
+
     const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    
+
+    console.log(`[Gemini] HTTP ${res.status} on attempt ${attempt + 1} — retried: ${attempt > 0}`);
+
     if (res.ok) {
       const rawBody = await res.text();
       try {
         const data = JSON.parse(rawBody);
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) throw new Error('Empty Gemini response');
+        console.log(`[Gemini] ✓ Success on attempt ${attempt + 1}. Total requests this action: ${totalRequests}`);
         return text;
       } catch (e) {
         throw new Error('Failed to parse Gemini response as JSON');
       }
     }
-    
-    if (res.status === 429 || res.status === 503) {
-      if (attempt < maxRetries) {
-        const delay = Math.pow(2, attempt) * 1000;
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
+
+    // 503 — Transient server overload. Do NOT retry: retrying a saturated server
+    // wastes quota slots and adds 7 s of backoff delay with no benefit.
+    // Each retry is a billable/quota-counted request even when the server is overloaded.
+    if (res.status === 503) {
+      console.warn(`[Gemini] ✗ HTTP 503 UNAVAILABLE. Not retrying (free-tier overload). Total requests this action: ${totalRequests}`);
+      throw new Error('GEMINI_503: Gemini is currently under heavy load. Please try again later.');
     }
-    
+
+    // 429 — Quota exhausted. Do NOT retry: the quota will not recover within
+    // the seconds that exponential backoff covers. Fail fast.
+    if (res.status === 429) {
+      console.warn(`[Gemini] ✗ HTTP 429 RESOURCE_EXHAUSTED. Not retrying. Total requests this action: ${totalRequests}`);
+      throw new Error('GEMINI_429: Gemini quota exceeded. Please try again later.');
+    }
+
+    console.warn(`[Gemini] ✗ HTTP ${res.status} on attempt ${attempt + 1}. Total requests this action: ${totalRequests}`);
     throw new Error(`Gemini ${res.status}`);
   }
   throw new Error('Max retries exceeded');
@@ -474,66 +490,7 @@ type must be "event", "task", or "break".`;
   }
 }
 
-export async function generateDailyPlan(
-  tasks: Task[],
-  events: CalendarEvent[],
-  forceRefresh = false
-): Promise<{ blocks: DayBlock[]; fromCache: boolean; fromAI: boolean }> {
-  if (!forceRefresh) {
-    const cached = loadPlanCache();
-    if (cached) {
-      return { blocks: cached.blocks, fromCache: true, fromAI: true };
-    } else {
-      return { blocks: buildLocalDailyPlan(tasks, events), fromCache: false, fromAI: false };
-    }
-  }
 
-  const today = new Date().toISOString().split('T')[0];
-  const todayEvents = events.filter(e => e.startDate <= today && e.endDate >= today && !e.allDay);
-  const pendingTasks = tasks.filter(t => t.status !== 'completed').slice(0, 8);
-
-  const prompt = `You are Priorify, an AI productivity assistant. Generate an optimized daily time-block schedule for TODAY (${today}).
-
-Fixed calendar events (cannot be moved):
-${JSON.stringify(todayEvents.map(e => ({ title: e.title, start: e.startTime, end: e.endTime, location: e.location })), null, 2)}
-
-Pending tasks to fit around events (prioritize by importance):
-${JSON.stringify(pendingTasks.map(t => ({ title: t.title, priority: t.priority, dueDate: t.dueDate, category: t.category })), null, 2)}
-
-Rules:
-- Working hours: 08:00–20:00
-- Don't overlap with fixed events
-- Add short breaks (15 min) after 90 min blocks
-- Keep focused work blocks 60–90 min
-- Put highest priority tasks in peak morning hours (09:00–12:00)
-
-Return ONLY valid JSON:
-{
-  "blocks": [
-    { "time": "09:00", "endTime": "10:30", "type": "task", "title": "...", "notes": "..." }
-  ]
-}
-type must be "event", "task", or "break".`;
-
-  try {
-    const raw = await callGemini(prompt);
-    const parsed = JSON.parse(raw.trim());
-    if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
-      // Merge AI plan with actual event colors
-      const blocks: DayBlock[] = parsed.blocks.map((b: DayBlock) => {
-        const matchingEvent = todayEvents.find(e => e.title === b.title);
-        return { ...b, color: matchingEvent?.color };
-      });
-      savePlanCache(blocks);
-      return { blocks, fromCache: false, fromAI: true };
-    }
-    throw new Error('Invalid blocks structure');
-  } catch (err) {
-    console.warn('[aiEngine] Gemini daily plan failed, using local fallback:', err);
-    const blocks = buildLocalDailyPlan(tasks, events);
-    return { blocks, fromCache: false, fromAI: false };
-  }
-}
 
 // ─── AI Insights ──────────────────────────────────────────────────────────────
 
@@ -649,7 +606,12 @@ Provide concise, actionable insights. Return ONLY valid JSON:
       return { insights, fromCache: false, fromAI: true };
     }
     throw new Error('Missing required fields');
-  } catch (err) {
+  } catch (err: any) {
+    // Re-throw quota/overload errors so the Refresh button can show a specific
+    // message instead of silently serving stale local analysis.
+    if (err?.message?.startsWith('GEMINI_503') || err?.message?.startsWith('GEMINI_429')) {
+      throw err;
+    }
     console.warn('[aiEngine] Gemini insights failed, using local fallback:', err);
     const insights = buildLocalInsights(tasks, events);
     return { insights, fromCache: false, fromAI: false };
@@ -816,7 +778,12 @@ type for schedule blocks must be "event", "task", or "break".`;
       return parsed; // Returns { suggestedPlan, reason, changes }
     }
     throw new Error('Invalid reschedule format');
-  } catch (err) {
+  } catch (err: any) {
+    // Re-throw quota/overload errors so the UI can display a specific message
+    // instead of silently swallowing the failure into the local fallback.
+    if (err?.message?.startsWith('GEMINI_503') || err?.message?.startsWith('GEMINI_429')) {
+      throw err;
+    }
     console.warn('[aiEngine] generateRescheduleSuggestion failed, using local fallback:', err);
     
     // Local Fallback Algorithm
