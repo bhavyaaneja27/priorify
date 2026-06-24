@@ -64,21 +64,29 @@ body,
   -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar {
+body::-webkit-scrollbar,
+.custom-scroll::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-::-webkit-scrollbar-track {
+body::-webkit-scrollbar-track,
+.custom-scroll::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
+body::-webkit-scrollbar-thumb,
+.custom-scroll::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb {
   background: var(--border-color);
   border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+body::-webkit-scrollbar-thumb:hover,
+.custom-scroll::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
 

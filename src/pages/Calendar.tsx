@@ -20,7 +20,7 @@ type ViewMode = 'month' | 'week' | 'day';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(d: Date): string {
-  return d.toISOString().split('T')[0];
+  return getLocalYMD(d);
 }
 
 function addDays(d: Date, n: number): Date {
@@ -66,6 +66,30 @@ function formatTime12(time: string): string {
 
 function formatDateDisplay(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getLocalYMD(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function isEventPast(event: CalendarEvent): boolean {
+  const now = new Date();
+  const todayStr = getLocalYMD(now);
+  
+  if (event.allDay) {
+    return event.endDate < todayStr;
+  } else {
+    if (event.endDate < todayStr) return true;
+    if (event.endDate === todayStr) {
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const eventEndMinutes = event.endTime ? minutesSinceMidnight(event.endTime) : 1440;
+      return eventEndMinutes < currentMinutes;
+    }
+    return false;
+  }
 }
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -909,6 +933,18 @@ export default function Calendar() {
   const [modal, setModal]   = useState<ModalMode>(null);
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
   const [createDate, setCreateDate] = useState<string | undefined>();
+  const [showPast, setShowPast] = useState(false);
+
+  const wrappedGetEventsForDate = (dateStr: string) => {
+    const rawEvents = getEventsForDate(dateStr);
+    if (showPast) return rawEvents;
+    return rawEvents.filter(ev => !isEventPast(ev));
+  };
+
+  const hasVisibleEvents = useMemo(() => {
+    if (showPast) return events.length > 0;
+    return events.some(e => !isEventPast(e));
+  }, [events, showPast]);
 
   // ── Navigation label ──────────────────────────────────────────────────────
 
@@ -1001,6 +1037,15 @@ export default function Calendar() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-dark-300 hover:text-dark-100 transition-colors mr-2">
+              <input
+                type="checkbox"
+                className="w-3.5 h-3.5 rounded border-dark-600 bg-dark-900 text-accent-blue focus:ring-accent-blue/30"
+                checked={showPast}
+                onChange={e => setShowPast(e.target.checked)}
+              />
+              Show Past Events
+            </label>
             {/* View switcher */}
             <div className="flex items-center rounded-xl border border-dark-600 bg-dark-900 p-1">
               {(['month', 'week', 'day'] as ViewMode[]).map(v => (
@@ -1056,12 +1101,25 @@ export default function Calendar() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.2 }}
-          className="glass-card flex-1 overflow-hidden flex flex-col min-h-0"
+          className="glass-card flex-1 overflow-hidden flex flex-col min-h-0 relative"
         >
+          {!hasVisibleEvents && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-dark-900/40 backdrop-blur-sm pointer-events-none">
+              <div className="text-center p-6 rounded-2xl bg-dark-900 border border-dark-600 shadow-2xl pointer-events-auto">
+                <CalendarIcon className="w-10 h-10 mx-auto text-accent-blue/50 mb-3" />
+                <p className="text-sm font-bold text-dark-100">No upcoming events scheduled</p>
+                <p className="text-xs text-dark-400 mt-1">Your calendar is currently clear.</p>
+                <button onClick={() => openCreate()} className="mt-4 px-5 py-2.5 bg-accent-blue text-white rounded-xl text-sm font-semibold hover:bg-accent-blue/90 transition-all shadow-lg shadow-accent-blue/20">
+                  New Event
+                </button>
+              </div>
+            </div>
+          )}
+
           {view === 'month' && (
             <MonthView
               cursor={cursor}
-              getEventsForDate={getEventsForDate}
+              getEventsForDate={wrappedGetEventsForDate}
               onDayClick={handleDayClick}
               onEventClick={openDetail}
             />
@@ -1069,7 +1127,7 @@ export default function Calendar() {
           {view === 'week' && (
             <WeekView
               cursor={cursor}
-              getEventsForDate={getEventsForDate}
+              getEventsForDate={wrappedGetEventsForDate}
               onDayClick={(d) => { setCursor(d); setView('day'); }}
               onEventClick={openDetail}
             />
@@ -1077,7 +1135,7 @@ export default function Calendar() {
           {view === 'day' && (
             <DayView
               cursor={cursor}
-              getEventsForDate={getEventsForDate}
+              getEventsForDate={wrappedGetEventsForDate}
               onEventClick={openDetail}
             />
           )}

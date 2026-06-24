@@ -6,6 +6,7 @@ import {
   Calendar, ListTodo, ArrowUpRight, Loader2, Info
 } from 'lucide-react';
 import { useTasks, Task, TaskPriority, TaskStatus } from '../hooks/usePersistence';
+import { useReminders, requestNotificationPermission } from '../hooks/useReminders';
 
 // ─── Design helpers ───────────────────────────────────────────────────────────
 
@@ -110,6 +111,9 @@ interface TaskFormData {
   priority: TaskPriority;
   dueDate: string;
   status: TaskStatus;
+  dueTime?: string;
+  reminder15Min?: boolean;
+  reminderAtDeadline?: boolean;
 }
 
 const DEFAULT_FORM: TaskFormData = {
@@ -119,6 +123,9 @@ const DEFAULT_FORM: TaskFormData = {
   priority: 'medium',
   dueDate: '',
   status: 'pending',
+  dueTime: '',
+  reminder15Min: false,
+  reminderAtDeadline: false,
 };
 
 interface TaskFormProps {
@@ -129,12 +136,46 @@ interface TaskFormProps {
   loading?: boolean;
 }
 
+const parseDueTime = (t: string) => {
+  if (!t) return { h: '', m: '', p: 'AM' };
+  const [hh, mm] = t.split(':');
+  let hNum = parseInt(hh, 10);
+  const p = hNum >= 12 ? 'PM' : 'AM';
+  hNum = hNum % 12 || 12;
+  return { h: hNum.toString().padStart(2, '0'), m: mm, p };
+};
+
+const formatDueTime = (h: string, m: string, p: string) => {
+  if (!h || !m) return '';
+  let hNum = parseInt(h, 10);
+  if (p === 'PM' && hNum !== 12) hNum += 12;
+  if (p === 'AM' && hNum === 12) hNum = 0;
+  return `${hNum.toString().padStart(2, '0')}:${m.padStart(2, '0')}`;
+};
+
 function TaskForm({ initial = DEFAULT_FORM, onSubmit, onCancel, submitLabel, loading }: TaskFormProps) {
   const [form, setForm] = useState<TaskFormData>(initial);
   const [errors, setErrors] = useState<Partial<Record<keyof TaskFormData, string>>>({});
 
   const set = <K extends keyof TaskFormData>(k: K, v: TaskFormData[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
+
+  const handleTimeChange = (part: 'h' | 'm' | 'p', val: string) => {
+    let { h, m, p } = parseDueTime(form.dueTime || '');
+    if (part === 'h') h = val;
+    if (part === 'm') m = val;
+    if (part === 'p') p = val;
+    
+    if (!h && !m) {
+      setForm(prev => ({ ...prev, dueTime: '', reminder15Min: false, reminderAtDeadline: false }));
+      return;
+    }
+    
+    if (h && !m) m = '00';
+    if (m && !h) h = '12';
+
+    set('dueTime', formatDueTime(h, m, p));
+  };
 
   function validate(): boolean {
     const e: typeof errors = {};
@@ -146,7 +187,12 @@ function TaskForm({ initial = DEFAULT_FORM, onSubmit, onCancel, submitLabel, loa
 
   function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
-    if (validate()) onSubmit(form);
+    if (validate()) {
+      if (form.reminder15Min || form.reminderAtDeadline) {
+        requestNotificationPermission();
+      }
+      onSubmit(form);
+    }
   }
 
   const fieldCls = (k: keyof TaskFormData) =>
@@ -216,7 +262,7 @@ function TaskForm({ initial = DEFAULT_FORM, onSubmit, onCancel, submitLabel, loa
         </div>
       </div>
 
-      {/* Due date + Status row */}
+      {/* Due date + Due Time row */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold text-dark-300 mb-1.5">Due Date <span className="text-accent-coral">*</span></label>
@@ -230,11 +276,55 @@ function TaskForm({ initial = DEFAULT_FORM, onSubmit, onCancel, submitLabel, loa
           {errors.dueDate && <p className="mt-1 text-[11px] text-accent-coral">{errors.dueDate}</p>}
         </div>
         <div>
+          <label className="block text-xs font-semibold text-dark-300 mb-1.5">Due Time (Optional)</label>
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex-1">
+              <select
+                className="w-full px-2 py-2.5 rounded-xl text-sm bg-dark-900 border border-dark-600 focus:border-accent-blue outline-none transition-all appearance-none text-center"
+                value={parseDueTime(form.dueTime || '').h}
+                onChange={e => handleTimeChange('h', e.target.value)}
+              >
+                <option value="">--</option>
+                {Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).map(h => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
+            <span className="text-dark-400 font-bold">:</span>
+            <div className="relative flex-1">
+              <select
+                className="w-full px-2 py-2.5 rounded-xl text-sm bg-dark-900 border border-dark-600 focus:border-accent-blue outline-none transition-all appearance-none text-center"
+                value={parseDueTime(form.dueTime || '').m}
+                onChange={e => handleTimeChange('m', e.target.value)}
+              >
+                <option value="">--</option>
+                {Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0')).map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div className="relative w-20">
+              <select
+                className="w-full px-2 py-2.5 rounded-xl text-sm bg-dark-900 border border-dark-600 focus:border-accent-blue outline-none transition-all appearance-none text-center"
+                value={parseDueTime(form.dueTime || '').p}
+                onChange={e => handleTimeChange('p', e.target.value)}
+              >
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status + Reminders row */}
+      <div className="grid grid-cols-2 gap-3 pt-2">
+        <div>
           <label className="block text-xs font-semibold text-dark-300 mb-1.5">Status</label>
           <div className="relative">
             <select
               id="task-status"
-              className="w-full px-3 py-2.5 rounded-xl text-sm appearance-none pr-8"
+              className="w-full px-3 py-2.5 rounded-xl text-sm appearance-none pr-8 bg-dark-900 border border-dark-600 focus:border-accent-blue outline-none transition-all"
               value={form.status}
               onChange={e => set('status', e.target.value as TaskStatus)}
             >
@@ -243,6 +333,31 @@ function TaskForm({ initial = DEFAULT_FORM, onSubmit, onCancel, submitLabel, loa
               ))}
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-dark-400 pointer-events-none" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-dark-300 mb-1.5">Reminders</label>
+          <div className="flex flex-col gap-2 pt-1">
+            <label className={`flex items-center gap-2 text-sm text-dark-100 ${!form.dueTime ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+              <input
+                type="checkbox"
+                disabled={!form.dueTime}
+                checked={form.reminder15Min || false}
+                onChange={e => set('reminder15Min', e.target.checked)}
+                className="w-4 h-4 rounded border-dark-600 text-accent-blue focus:ring-accent-blue/30 bg-dark-900"
+              />
+              15 min before
+            </label>
+            <label className={`flex items-center gap-2 text-sm text-dark-100 ${!form.dueTime ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+              <input
+                type="checkbox"
+                disabled={!form.dueTime}
+                checked={form.reminderAtDeadline || false}
+                onChange={e => set('reminderAtDeadline', e.target.checked)}
+                className="w-4 h-4 rounded border-dark-600 text-accent-blue focus:ring-accent-blue/30 bg-dark-900"
+              />
+              At deadline
+            </label>
           </div>
         </div>
       </div>
@@ -548,6 +663,7 @@ type ModalType = 'create' | 'edit' | 'detail' | 'delete' | null;
 
 export default function Tasks() {
   const { tasks, loading, createTask, updateTask, deleteTask } = useTasks();
+  const { reminders, setReminder, removeReminder } = useReminders();
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
@@ -556,6 +672,26 @@ export default function Tasks() {
 
   const [modal, setModal] = useState<ModalType>(null);
   const [selected, setSelected] = useState<Task | null>(null);
+
+  const [showNotifBanner, setShowNotifBanner] = useState(() => {
+    return localStorage.getItem('priorify_notif_banner_dismissed') !== 'true';
+  });
+
+  function handleTestNotification() {
+    requestNotificationPermission();
+    if (Notification.permission === 'granted') {
+      new Notification('Test Notification', {
+        body: 'Reminders are working perfectly!',
+      });
+    } else {
+      alert('Please allow notifications in your browser first.');
+    }
+  }
+
+  function dismissBanner() {
+    setShowNotifBanner(false);
+    localStorage.setItem('priorify_notif_banner_dismissed', 'true');
+  }
 
   // Derived stats
   const total       = tasks.length;
@@ -602,19 +738,46 @@ export default function Tasks() {
   function closeModal() { setModal(null); setSelected(null); }
 
   function handleCreate(data: TaskFormData) {
-    createTask(data);
+    const { dueTime, reminder15Min, reminderAtDeadline, ...taskData } = data;
+    const task = createTask(taskData);
+    if (dueTime && (reminder15Min || reminderAtDeadline)) {
+      setReminder(task.id, {
+        title: task.title,
+        dueDate: task.dueDate,
+        dueTime,
+        reminder15Min,
+        reminderAtDeadline,
+        notified15Min: false,
+        notifiedAtDeadline: false,
+      });
+    }
     closeModal();
   }
 
   function handleEdit(data: TaskFormData) {
     if (!selected) return;
-    updateTask(selected.id, data);
+    const { dueTime, reminder15Min, reminderAtDeadline, ...taskData } = data;
+    updateTask(selected.id, taskData);
+    if (dueTime && (reminder15Min || reminderAtDeadline)) {
+      setReminder(selected.id, {
+        title: data.title,
+        dueDate: data.dueDate,
+        dueTime,
+        reminder15Min,
+        reminderAtDeadline,
+        notified15Min: false,
+        notifiedAtDeadline: false,
+      });
+    } else {
+      removeReminder(selected.id);
+    }
     closeModal();
   }
 
   function handleDelete() {
     if (!selected) return;
     deleteTask(selected.id);
+    removeReminder(selected.id);
     closeModal();
   }
 
@@ -652,20 +815,50 @@ export default function Tasks() {
   return (
     <>
       <div className="space-y-6">
+        {showNotifBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative p-4 rounded-xl bg-accent-blue/10 border border-accent-blue/20 flex items-start sm:items-center justify-between gap-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-accent-blue/20 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4 text-accent-blue" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-accent-blue">New Feature: Smart Reminders!</p>
+                <p className="text-xs text-dark-300 mt-0.5">You can now set exact times and get local browser notifications 15 minutes before or exactly at deadline.</p>
+              </div>
+            </div>
+            <button onClick={dismissBanner} className="text-dark-400 hover:text-dark-100 flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-dark-100">Tasks</h1>
             <p className="text-sm text-dark-300 mt-1">Manage your priorities, deadlines, and progress</p>
           </div>
-          <button
-            id="create-task-btn"
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent-blue text-white font-semibold text-sm hover:bg-accent-blue/90 transition-all shadow-lg shadow-accent-blue/20"
-          >
-            <Plus className="w-4 h-4" />
-            New Task
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleTestNotification}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-dark-800 text-dark-100 font-semibold text-sm hover:bg-dark-700 border border-dark-600 transition-all"
+            >
+              <Circle className="w-4 h-4 text-accent-teal" />
+              Test Notification
+            </button>
+            <button
+              id="create-task-btn"
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent-blue text-white font-semibold text-sm hover:bg-accent-blue/90 transition-all shadow-lg shadow-accent-blue/20"
+            >
+              <Plus className="w-4 h-4" />
+              New Task
+            </button>
+          </div>
         </div>
 
         {/* ── Stats row ── */}
@@ -867,6 +1060,9 @@ export default function Tasks() {
               priority: selected.priority,
               dueDate: selected.dueDate,
               status: selected.status,
+              dueTime: reminders[selected.id]?.dueTime || '',
+              reminder15Min: reminders[selected.id]?.reminder15Min || false,
+              reminderAtDeadline: reminders[selected.id]?.reminderAtDeadline || false,
             }}
             onSubmit={handleEdit}
             onCancel={closeModal}

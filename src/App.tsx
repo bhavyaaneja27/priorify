@@ -15,6 +15,7 @@ import AIPriorityEngine from './pages/AIPriorityEngine';
 import Settings from './pages/Settings';
 import Welcome from './pages/Welcome';
 import Layout from './components/Layout';
+import { ReminderEngine } from './hooks/useReminders';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -65,33 +66,36 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/welcome" replace />} />
-      <Route path="/welcome" element={<GuestRoute><Welcome /></GuestRoute>} />
+    <>
+      <ReminderEngine />
+      <Routes>
+        <Route path="/" element={<Navigate to="/welcome" replace />} />
+        <Route path="/welcome" element={<GuestRoute><Welcome /></GuestRoute>} />
 
-      <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
-      <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
-      <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+        <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+        <Route path="/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
+        <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
 
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-      <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-      <Route path="/action-planner" element={<ProtectedRoute><AIPlanner /></ProtectedRoute>} />
-      <Route path="/productivity-check" element={<ProtectedRoute><ProductivityCheck /></ProtectedRoute>} />
-      <Route path="/focus" element={<ProtectedRoute><FocusSessions /></ProtectedRoute>} />
-      <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
-      <Route path="/ai-engine" element={<ProtectedRoute><AIPriorityEngine /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+        <Route path="/action-planner" element={<ProtectedRoute><AIPlanner /></ProtectedRoute>} />
+        <Route path="/productivity-check" element={<ProtectedRoute><ProductivityCheck /></ProtectedRoute>} />
+        <Route path="/focus" element={<ProtectedRoute><FocusSessions /></ProtectedRoute>} />
+        <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
+        <Route path="/ai-engine" element={<ProtectedRoute><AIPriorityEngine /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
-      {/* Legacy StudyAI routes → Priorify */}
-      <Route path="/timetable" element={<Navigate to="/calendar" replace />} />
-      <Route path="/attendance" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/ai-planner" element={<Navigate to="/action-planner" replace />} />
-      <Route path="/mood" element={<Navigate to="/productivity-check" replace />} />
-      <Route path="/pomodoro" element={<Navigate to="/focus" replace />} />
+        {/* Legacy StudyAI routes → Priorify */}
+        <Route path="/timetable" element={<Navigate to="/calendar" replace />} />
+        <Route path="/attendance" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/ai-planner" element={<Navigate to="/action-planner" replace />} />
+        <Route path="/mood" element={<Navigate to="/productivity-check" replace />} />
+        <Route path="/pomodoro" element={<Navigate to="/focus" replace />} />
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </>
   );
 }
 
