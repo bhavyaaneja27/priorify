@@ -1,52 +1,123 @@
-# Priorify — AI Productivity Companion
+# 🚀 Priorify – AI Productivity Platform
 
-Priorify helps students, professionals, freelancers, and founders prioritize tasks, plan their day, avoid missed deadlines, and stay productive.
+Priorify is an AI-powered productivity web application that helps users organize tasks, plan their day, stay focused, and improve productivity through intelligent recommendations.
 
-> **Note:** Priorify is a separate product from StudyAI. It uses its own Supabase project (`priorify_schema.sql` / `priorify_rls.sql`). Legacy StudyAI SQL files in this repo are archived references only.
+The application combines task management, productivity analytics, AI assistance, focus sessions, and calendar planning into a single modern platform.
 
-## Features (MVP in progress)
+## 🌐 Live Demo
 
-- **Tasks** — Smart task management with deadlines, priorities, and categories *(Phase 1)*
-- **AI Action Planner** — Generate actionable plans and break goals into steps
-- **Smart Daily Planner** — AI-generated daily schedule *(upcoming)*
-- **Calendar** — Local calendar events *(Google sync coming later)*
-- **Productivity Check** — Daily energy reflection with emoji picker
-- **Focus Sessions** — Timed deep-work sessions
-- **Insights** — XP, streaks, achievements, and productivity score
-- **Gamification** — XP, levels, streaks, and achievements
+https://priorify-408442601425.asia-south1.run.app
 
-## Tech Stack
+---
 
-- React + TypeScript + Vite
-- Tailwind CSS
-- Supabase (auth + PostgreSQL) — *connect in a future phase*
-- Google Gemini (AI plans)
-- Netlify
+## ✨ Features
 
-## Getting Started
+- 🤖 AI-powered productivity assistant
+- 📋 Smart task management
+- 🧠 AI Action Planner
+- 📅 Interactive calendar
+- ⏱️ Focus sessions
+- 📊 Productivity dashboard
+- 📈 Weekly productivity analytics
+- 😊 Daily productivity check
+- 🔐 Google Authentication
+- 📧 Email & Password Authentication
+- ☁️ Secure Supabase backend
+- 📱 Progressive Web App (PWA)
+- 📲 Fully responsive interface
+- ⚡ Fast performance with Vite
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- React
+- Vite
+- TypeScript
+- HTML5
+- CSS3
+
+### Backend & Database
+- Supabase
+- PostgreSQL
+
+### Authentication
+- Google OAuth
+- Email & Password Authentication
+
+### AI
+- Google Gemini API
+
+### Deployment
+- Docker
+- Nginx
+- Google Cloud Run
+- GitHub Continuous Deployment
+
+---
+
+## 🚀 Getting Started
+
+### Clone the repository
+
+```bash
+git clone https://github.com/bhavyaaneja27/priorify.git
+```
+
+### Navigate into the project
+
+```bash
+cd priorify
+```
+
+### Install dependencies
 
 ```bash
 npm install
+```
+
+### Create a `.env` file
+
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_GEMINI_API_KEY=
+```
+
+### Start the development server
+
+```bash
 npm run dev
 ```
 
-Copy `.env.example` to `.env` and add your Gemini API key. Supabase credentials will be added when the Priorify database project is connected.
+---
 
-```bash
-npm run build
-npm run typecheck
-npm run lint
+## 📂 Project Structure
+
+```
+src/
+public/
+supabase/
+Dockerfile
+package.json
+README.md
 ```
 
-## Database Setup (future)
+---
 
-When ready, create a **new** Supabase project and run:
+## 🚀 Deployment
 
-1. `priorify_schema.sql`
-2. `priorify_rls.sql`
+The application is deployed on **Google Cloud Run** using **Docker** with automatic deployment from **GitHub**.
 
-Do **not** run these against the StudyAI Supabase project.
+---
 
-## License
+## 👨‍💻 Developer
 
-Built for learning, portfolio, and educational purposes.
+**Bhavya Aneja**
+
+GitHub: https://github.com/bhavyaaneja27
+
+---
+
+⭐ If you like this project, consider giving it a star!
