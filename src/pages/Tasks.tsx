@@ -5,7 +5,7 @@ import {
   Circle, Clock, AlertTriangle, ChevronDown, Tag,
   Calendar, ListTodo, ArrowUpRight, Loader2, Info
 } from 'lucide-react';
-import { useTasks, Task, TaskPriority, TaskStatus } from '../hooks/usePersistence';
+import { useTasks, Task, TaskPriority, TaskStatus, useUserProfile } from '../hooks/usePersistence';
 import { useReminders, requestNotificationPermission } from '../hooks/useReminders';
 
 // ─── Design helpers ───────────────────────────────────────────────────────────
@@ -663,6 +663,7 @@ type ModalType = 'create' | 'edit' | 'detail' | 'delete' | null;
 
 export default function Tasks() {
   const { tasks, loading, createTask, updateTask, deleteTask } = useTasks();
+  const { profile, saveProfile } = useUserProfile();
   const { reminders, setReminder, removeReminder } = useReminders();
 
   const [search, setSearch] = useState('');
@@ -786,6 +787,44 @@ export default function Tasks() {
     updateTask(t.id, { status: next });
     // Keep detail modal open but refresh selected
     if (selected?.id === t.id) setSelected({ ...t, status: next, updatedAt: new Date().toISOString() });
+
+    // XP, Level & Streak Logic
+    if (profile) {
+      const xpRewards: Record<TaskPriority, number> = { low: 10, medium: 20, high: 30, critical: 40 };
+      const xpAmount = xpRewards[t.priority] || 20;
+      
+      let newXP = profile.totalXP || 0;
+      let newStreak = profile.streak || 1;
+      
+      if (next === 'completed') {
+        newXP += xpAmount;
+        
+        const today = new Date().toISOString().split('T')[0];
+        const lastStreakDate = localStorage.getItem('priorify_last_streak_date');
+        
+        if (lastStreakDate !== today) {
+          if (lastStreakDate) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            if (lastStreakDate === yesterdayStr) {
+              newStreak += 1;
+            } else {
+              newStreak = 1;
+            }
+          } else {
+            newStreak = 1; // First completion ever
+          }
+          localStorage.setItem('priorify_last_streak_date', today);
+        }
+      } else {
+        newXP = Math.max(0, newXP - xpAmount);
+      }
+      
+      const newLevel = Math.floor(newXP / 100) + 1;
+      saveProfile({ ...profile, totalXP: newXP, level: newLevel, streak: newStreak });
+    }
   }
 
   function handleDetailToggle() {

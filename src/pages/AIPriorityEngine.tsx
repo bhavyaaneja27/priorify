@@ -198,7 +198,7 @@ function SmartPrioritizeTab({ tasks, events }: { tasks: any[]; events: any[] }) 
 // ─── Tab 2 — Daily Planner ────────────────────────────────────────────────────
 
 function DailyPlannerTab({ tasks, events, productivityData, onPlanGenerated }: { tasks: any[]; events: any[]; productivityData: any; onPlanGenerated: (plan: any) => void }) {
-  const { plans: dailyPlans } = useDailyPlans();
+  const { plans: dailyPlans, loading: loadingDailyPlans } = useDailyPlans();
   const { addSuggestion, updateSuggestionStatus, getPendingSuggestionForDate } = useRescheduling();
   
   const [blocks, setBlocks] = useState<DayBlock[] | null>(null);
@@ -225,10 +225,18 @@ function DailyPlannerTab({ tasks, events, productivityData, onPlanGenerated }: {
   }
 
   useEffect(() => {
-    const controller = new AbortController();
-    load(false, controller.signal);
-    return () => controller.abort();
-  }, []);
+    if (loadingDailyPlans) return;
+    
+    if (currentPlan && !blocks) {
+      setBlocks(currentPlan.schedule);
+      setFromAI(false);
+      setFromCache(true);
+    } else if (!currentPlan && !blocks) {
+      const controller = new AbortController();
+      load(false, controller.signal);
+      return () => controller.abort();
+    }
+  }, [loadingDailyPlans, currentPlan, blocks]);
 
   const handleCheckReschedule = async () => {
     if (!currentPlan) return;
