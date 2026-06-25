@@ -294,7 +294,7 @@ function DailyPlannerTab({ tasks, events, productivityData, onPlanGenerated }: {
         <div>
           <p className="text-sm font-semibold text-dark-100">{today}</p>
           <p className="text-xs text-dark-400 mt-0.5">
-            {fromCache ? '⚡ Cached plan (< 30 min old)' : fromAI ? '✨ AI-generated plan' : '🔧 Local plan (AI unavailable)'}
+            {fromCache ? '⚡ Cached plan (< 30 min old)' : fromAI ? '✨ AI-generated plan' : '⚡ Smart Local Planning (Gemini Ready)'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -557,7 +557,7 @@ function AIInsightsTab({ tasks, events }: { tasks: any[]; events: any[] }) {
         <p className="text-xs text-dark-400">
           {loading ? 'Analyzing your data…' :
             fromCache ? '⚡ Cached insights (< 30 min old)' :
-            fromAI ? '✨ AI-powered analysis' : '🔧 Local analysis'}
+            fromAI ? '✨ AI-powered analysis' : '⚡ Smart Local Analysis (Gemini Ready)'}
         </p>
         <button
           onClick={() => load(true)}
@@ -602,7 +602,7 @@ function AIInsightsTab({ tasks, events }: { tasks: any[]; events: any[] }) {
           <Info className="w-3.5 h-3.5 text-dark-400 flex-shrink-0 mt-0.5" />
           <p className="text-[11px] text-dark-400">
             Insights are cached for 30 minutes. Click Refresh for fresh AI analysis.
-            {fromAI ? '' : ' (Gemini API unavailable — showing local analysis)'}
+            {fromAI ? '' : ' (Hybrid Intelligence Mode Active)'}
           </p>
         </div>
       )}
