@@ -17,6 +17,7 @@ import Welcome from './pages/Welcome';
 import Layout from './components/Layout';
 import { ReminderEngine } from './hooks/useReminders';
 import { TourProvider } from './contexts/TourContext';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -68,6 +69,7 @@ function App() {
 
   return (
     <>
+      <PWAInstallPrompt />
       <ReminderEngine />
       <TourProvider>
         <Routes>
