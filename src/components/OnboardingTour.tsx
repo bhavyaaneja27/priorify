@@ -34,7 +34,7 @@ const tourSteps = [
   },
   {
     title: 'Smart Calendar',
-    description: 'Plan tasks, deadlines, classes, meetings, and personal commitments in one organized view.',
+    description: 'Manage tasks, deadlines, classes, meetings, and personal commitments in one unified calendar.',
     icon: CalendarDays,
     color: 'text-accent-teal',
     bgColor: 'bg-accent-teal/10',
@@ -50,7 +50,7 @@ const tourSteps = [
   },
   {
     title: 'Focus Sessions',
-    description: 'Stay productive using distraction-free focus sessions designed to improve execution and consistency.',
+    description: 'Boost productivity with distraction-free focus sessions that help you stay consistent and complete tasks faster.',
     icon: Timer,
     color: 'text-accent-coral',
     bgColor: 'bg-accent-coral/10',
@@ -58,7 +58,7 @@ const tourSteps = [
   },
   {
     title: 'Productivity Insights',
-    description: 'Track progress, completion trends, focus patterns, and productivity habits over time.',
+    description: 'Visualize your progress, completion trends, focus patterns, and productivity habits with powerful insights.',
     icon: BarChart3,
     color: 'text-accent-green',
     bgColor: 'bg-accent-green/10',
@@ -66,7 +66,7 @@ const tourSteps = [
   },
   {
     title: 'AI Planning & Recommendations',
-    description: 'Google Gemini AI helps generate smarter plans, recommendations, and task strategies based on your workload.',
+    description: 'Google Gemini AI powers intelligent plans and recommendations, while Priorify\'s hybrid intelligence engine keeps insights fast and reliable.',
     icon: Zap,
     color: 'text-accent-blue',
     bgColor: 'bg-accent-blue/10',
@@ -74,7 +74,7 @@ const tourSteps = [
   },
   {
     title: 'Why Priorify?',
-    description: 'Priorify combines AI-powered planning, smart reminders, productivity analytics, and focused execution into a single productivity companion.',
+    description: 'Priorify brings AI planning, smart reminders, analytics, calendars, and focus tools together in one intelligent productivity platform.',
     icon: Brain,
     color: 'text-accent-purple',
     bgColor: 'bg-accent-purple/10',
