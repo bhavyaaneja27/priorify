@@ -1009,9 +1009,9 @@ export function useDailyPlans() {
           }));
           
           if (planData.length > 0) {
-            // Delete old ones first to prevent unique constraint violations simply
-            await supabase.from('daily_plans').delete().eq('user_id', user.id);
-            await supabase.from('daily_plans').insert(planData);
+            // Use upsert to atomically replace the plan for this user and date
+            const { error } = await supabase.from('daily_plans').upsert(planData, { onConflict: 'user_id, date' });
+            if (error) console.error('Supabase upsert daily plans error', error);
           }
         } catch (e) {
           console.error('Supabase save daily plans error', e);

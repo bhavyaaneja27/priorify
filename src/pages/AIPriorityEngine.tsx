@@ -9,7 +9,7 @@ import {
 import { useTasks, useCalendarEvents, useMoodHistory, useDailyPlans, useRescheduling, generateUUID } from '../hooks/usePersistence';
 import {
   sortTasksByPriority, analyzeRisk, generateSmartDailyPlan, generateAIInsights,
-  checkRescheduleNeed, generateRescheduleSuggestion, savePlanCache,
+  checkRescheduleNeed, generateRescheduleSuggestion, savePlanCache, saveSmartPlanCache,
   ScoredTask, DayBlock, AIInsights, RiskLevel, RISK_CONFIG, formatTime12
 } from '../lib/aiEngine';
 
@@ -270,6 +270,7 @@ function DailyPlannerTab({ tasks, events, productivityData, onPlanGenerated }: {
     setBlocks(pendingSuggestion.suggestedPlan.schedule);
     onPlanGenerated(pendingSuggestion.suggestedPlan);
     savePlanCache(pendingSuggestion.suggestedPlan.schedule);
+    saveSmartPlanCache(pendingSuggestion.suggestedPlan);
     updateSuggestionStatus(pendingSuggestion.id, 'accepted');
   };
 
