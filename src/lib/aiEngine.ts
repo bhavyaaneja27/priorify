@@ -12,8 +12,9 @@
 
 import type { Task } from '../hooks/usePersistence';
 import type { CalendarEvent, DailyPlan } from '../hooks/usePersistence';
+import { getEnvVar } from './env';
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+const GEMINI_API_KEY = getEnvVar('VITE_GEMINI_API_KEY') as string | undefined;
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

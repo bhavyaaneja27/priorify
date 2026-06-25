@@ -26,6 +26,11 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy the build output from the previous stage to Nginx's html directory
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Copy the runtime environment variable injector script
+COPY env.sh /docker-entrypoint.d/99-env.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.d/99-env.sh && \
+    chmod +x /docker-entrypoint.d/99-env.sh
+
 # Expose the port
 EXPOSE 8080
 

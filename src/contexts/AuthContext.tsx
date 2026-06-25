@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { getEnvVar } from '../lib/env';
 
 interface AuthUser {
   id: string;
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
 
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    if (!getEnvVar('VITE_SUPABASE_URL') || !getEnvVar('VITE_SUPABASE_ANON_KEY')) {
       finish(null);
       return;
     }
